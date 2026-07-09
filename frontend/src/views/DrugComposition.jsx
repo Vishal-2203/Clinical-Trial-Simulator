@@ -6,8 +6,32 @@ import { motion } from 'framer-motion';
 
 const COMP_COLORS = { a: '#3b82f6', b: '#8b5cf6', c: '#ec4899' };
 
+const DISEASE_DRUGS = {
+  type2_diabetes: {
+    drugName: "Metformin + GLP-1 Combo",
+    a: { name: "Biguanide (Metformin)", pathway: "AMPK Activation", desc: "Lowers hepatic glucose production" },
+    b: { name: "GLP-1 Agonist (Semaglutide)", pathway: "GLP-1 Receptor Agonist", desc: "Stimulates insulin secretion" },
+    c: { name: "Excipient", pathway: "Inactive Formulation", desc: "Formulation binder" }
+  },
+  hypertension: {
+    drugName: "Lisinopril + Amlodipine Combo",
+    a: { name: "ACE Inhibitor (Lisinopril)", pathway: "RAAS Pathway", desc: "Relaxes blood vessels via ACE" },
+    b: { name: "Calcium Blocker (Amlodipine)", pathway: "Calcium Channels", desc: "Inhibits calcium ions into heart muscle" },
+    c: { name: "Excipient", pathway: "Inactive Formulation", desc: "Formulation binder" }
+  },
+  nsclc: {
+    drugName: "Osimertinib + Cytotoxic Agent",
+    a: { name: "EGFR Inhibitor (Osimertinib)", pathway: "EGFR Tyrosine Kinase", desc: "Targets EGFR mutant cancer cells" },
+    b: { name: "Cytotoxic Agent (Chemo)", pathway: "DNA Alkylation", desc: "Non-specific cancer cell destruction" },
+    c: { name: "Excipient", pathway: "Inactive Formulation", desc: "Formulation binder" }
+  }
+};
+
 export default function DrugComposition() {
   const { history, observation } = useTrialStore();
+
+  const disease = observation?.disease ?? 'type2_diabetes';
+  const drugConfig = DISEASE_DRUGS[disease] || DISEASE_DRUGS.type2_diabetes;
 
   // Current composition from latest observation/state
   const current = observation?.composition ?? { a: 0.34, b: 0.33, c: 0.33 };
@@ -25,10 +49,11 @@ export default function DrugComposition() {
   [history]);
 
   const pieData = [
-    { name: 'Component A', value: current.a },
-    { name: 'Component B', value: current.b },
-    { name: 'Component C', value: current.c },
+    { name: drugConfig.a.name, value: current.a },
+    { name: drugConfig.b.name, value: current.b },
+    { name: drugConfig.c.name, value: current.c },
   ];
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 24 }}>
@@ -94,13 +119,17 @@ export default function DrugComposition() {
                 style={{
                   textAlign: 'center', padding: '10px 14px', borderRadius: 12,
                   background: `${color}12`, border: `1px solid ${color}30`,
+                  width: '100px'
                 }}
               >
-                <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
-                  Comp {key.toUpperCase()}
+                <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 4, height: '24px', overflow: 'hidden' }}>
+                  {drugConfig[key].name}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color }}>
                   {(current[key] * 100).toFixed(1)}%
+                </div>
+                <div style={{ fontSize: 8, color: '#475569', marginTop: 2 }}>
+                  {drugConfig[key].pathway}
                 </div>
               </motion.div>
             ))}
@@ -127,9 +156,9 @@ export default function DrugComposition() {
                   contentStyle={{ background: '#0a0a14', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
                 />
                 <Legend iconType="circle" iconSize={8} />
-                <Area type="monotone" dataKey="a" stackId="1" stroke={COMP_COLORS.a} fill={COMP_COLORS.a} fillOpacity={0.55} name="Comp A" isAnimationActive />
-                <Area type="monotone" dataKey="b" stackId="1" stroke={COMP_COLORS.b} fill={COMP_COLORS.b} fillOpacity={0.55} name="Comp B" isAnimationActive />
-                <Area type="monotone" dataKey="c" stackId="1" stroke={COMP_COLORS.c} fill={COMP_COLORS.c} fillOpacity={0.55} name="Comp C" isAnimationActive />
+                <Area type="monotone" dataKey="a" stackId="1" stroke={COMP_COLORS.a} fill={COMP_COLORS.a} fillOpacity={0.55} name={drugConfig.a.name} isAnimationActive />
+                <Area type="monotone" dataKey="b" stackId="1" stroke={COMP_COLORS.b} fill={COMP_COLORS.b} fillOpacity={0.55} name={drugConfig.b.name} isAnimationActive />
+                <Area type="monotone" dataKey="c" stackId="1" stroke={COMP_COLORS.c} fill={COMP_COLORS.c} fillOpacity={0.55} name={drugConfig.c.name} isAnimationActive />
               </AreaChart>
             </ResponsiveContainer>
           )}

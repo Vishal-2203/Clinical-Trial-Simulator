@@ -44,9 +44,9 @@ export default function PatientCohort() {
   }));
 
   const ageData = [
-    { age: '20–40', count: patients.filter(p => p.age >= 20 && p.age < 40).length },
-    { age: '40–60', count: patients.filter(p => p.age >= 40 && p.age < 60).length },
-    { age: '60+',   count: patients.filter(p => p.age >= 60).length },
+    { age: 'Pediatric (<18)', count: patients.filter(p => (p.profile?.age_group ?? (p.age < 18 ? 'pediatric' : '')) === 'pediatric').length },
+    { age: 'Adult (18-65)', count: patients.filter(p => (p.profile?.age_group ?? (p.age >= 18 && p.age <= 65 ? 'adult' : '')) === 'adult').length },
+    { age: 'Elderly (>65)',   count: patients.filter(p => (p.profile?.age_group ?? (p.age > 65 ? 'elderly' : '')) === 'elderly').length },
   ];
 
   const statusCounts = patients.reduce((acc, p) => {
@@ -59,7 +59,8 @@ export default function PatientCohort() {
 
   const activeCount = statusCounts['active'] ?? 0;
   const droppedCount = statusCounts['dropped_out'] ?? 0;
-  const avgAE = patients.length ? (patients.reduce((a, b) => a + (b.ae_count ?? 0), 0) / patients.length).toFixed(1) : '0.0';
+  const avgAE = patients.length ? (patients.reduce((a, b) => a + (b.ae_count ?? b.adverse_events?.length ?? 0), 0) / patients.length).toFixed(1) : '0.0';
+  const disease = observation?.disease ?? 'type2_diabetes';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, height: '100%' }}>
@@ -81,52 +82,61 @@ export default function PatientCohort() {
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px' }}>
               <thead>
                 <tr style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b', textAlign: 'left' }}>
-                  {['ID', 'Status', 'Age', 'Sex', 'Efficacy', 'AEs', 'Risk'].map(h => (
+                  {['ID', 'Status', 'Age (Group)', 'Sex', 'Heart Rate', disease === 'type2_diabetes' ? 'Glucose' : (disease === 'hypertension' ? 'BP (S/D)' : 'Tumor Size'), 'AEs'].map(h => (
                     <th key={h} style={{ padding: '0 10px 8px' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {patients.map((p, idx) => (
-                  <motion.tr
-                    key={p.id ?? idx}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.02 }}
-                    style={{ background: 'rgba(255,255,255,0.03)' }}
-                  >
-                    <td style={{ padding: '10px', fontSize: 11, fontFamily: 'monospace', borderRadius: '10px 0 0 10px', color: '#94a3b8' }}>
-                      {String(p.id ?? idx).slice(0, 10)}
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
-                        color: STATUS_COLORS[p.status] ?? '#94a3b8',
-                        background: `${STATUS_COLORS[p.status] ?? '#475569'}18`,
-                        padding: '2px 7px', borderRadius: 4,
-                      }}>
-                        {(p.status ?? 'active').replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px', fontSize: 12 }}>{p.age ?? '–'}</td>
-                    <td style={{ padding: '10px', fontSize: 12 }}>{p.sex ?? '–'}</td>
-                    <td style={{ padding: '10px', fontSize: 12, fontWeight: 700, color: '#10b981' }}>
-                      {((p.efficacy ?? 0) * 100).toFixed(0)}%
-                    </td>
-                    <td style={{ padding: '10px', fontSize: 12, fontWeight: 700, color: (p.ae_count ?? 0) > 0 ? '#ef4444' : '#475569' }}>
-                      {p.ae_count ?? 0}
-                    </td>
-                    <td style={{ padding: '10px', borderRadius: '0 10px 10px 0' }}>
-                      <div style={{ width: 56, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
-                        <div style={{
-                          height: '100%', borderRadius: 99,
-                          width: `${Math.min(100, (p.dropout_risk ?? 0) * 100)}%`,
-                          background: `hsl(${120 - (p.dropout_risk ?? 0) * 120}, 70%, 50%)`,
-                        }} />
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
+                {patients.map((p, idx) => {
+                  const age = p.profile?.age ?? p.age;
+                  const ageGroup = p.profile?.age_group ?? (age < 18 ? 'pediatric' : (age > 65 ? 'elderly' : 'adult'));
+                  const sex = p.profile?.sex ?? p.sex;
+                  const vitals = p.profile?.vitals ?? {};
+                  const hr = vitals.hr ? `${vitals.hr.toFixed(0)} bpm` : '72 bpm';
+                  
+                  let primaryMetric = '–';
+                  if (disease === 'type2_diabetes') {
+                    primaryMetric = vitals.glucose ? `${vitals.glucose.toFixed(1)} mg/dL` : '140.0 mg/dL';
+                  } else if (disease === 'hypertension') {
+                    primaryMetric = vitals.sbp ? `${vitals.sbp.toFixed(0)}/${vitals.dbp?.toFixed(0)} mmHg` : '120/80 mmHg';
+                  } else {
+                    primaryMetric = vitals.tumor_size ? `${vitals.tumor_size.toFixed(2)} cm` : '5.00 cm';
+                  }
+
+                  const aes = p.ae_count ?? p.adverse_events?.length ?? 0;
+
+                  return (
+                    <motion.tr
+                      key={p.id ?? idx}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.02 }}
+                      style={{ background: 'rgba(255,255,255,0.03)' }}
+                    >
+                      <td style={{ padding: '10px', fontSize: 11, fontFamily: 'monospace', borderRadius: '10px 0 0 10px', color: '#94a3b8' }}>
+                        {String(p.id ?? idx).slice(0, 10)}
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
+                          color: STATUS_COLORS[p.status] ?? '#10b981',
+                          background: `${STATUS_COLORS[p.status] ?? '#10b981'}18`,
+                          padding: '2px 7px', borderRadius: 4,
+                        }}>
+                          {(p.status ?? 'active').replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px', fontSize: 12 }}>{age} ({ageGroup})</td>
+                      <td style={{ padding: '10px', fontSize: 12, textTransform: 'capitalize' }}>{sex}</td>
+                      <td style={{ padding: '10px', fontSize: 12, fontWeight: 600, color: vitals.hr > 100 ? '#ef4444' : '#94a3b8' }}>{hr}</td>
+                      <td style={{ padding: '10px', fontSize: 12, fontWeight: 700, color: '#3b82f6' }}>{primaryMetric}</td>
+                      <td style={{ padding: '10px', fontSize: 12, fontWeight: 700, color: aes > 0 ? '#ef4444' : '#475569', borderRadius: '0 10px 10px 0' }}>
+                        {aes}
+                      </td>
+                    </motion.tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

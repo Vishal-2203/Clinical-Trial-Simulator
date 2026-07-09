@@ -36,6 +36,9 @@ export const api = {
       },
     })),
 
+  getDiseasePriorsV2: () => request('/simulation/disease-priors-v2'),
+
+
   runBenchmark: () =>
     request('/eval/benchmark').catch(() => ({
       results: [

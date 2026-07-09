@@ -13,6 +13,7 @@ class PatientProfile:
     sex: str
     disease: DiseaseType
     disease_stage: str
+    age_group: str = "adult"  # pediatric | adult | elderly
     comorbidities: list[str] = field(default_factory=list)
     baseline_labs: dict[str, float] = field(default_factory=dict)
     vitals: dict[str, float] = field(default_factory=dict)

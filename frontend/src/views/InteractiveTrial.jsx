@@ -89,7 +89,7 @@ export default function InteractiveTrial() {
       {/* Main 3-column layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.7fr 1fr', gap: 16, flex: 1, minHeight: 0 }}>
         {/* Left: State Viewer */}
-        <div className="liquid-glass" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 6, overflow: 'hidden' }}>
+        <div className="liquid-glass" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 6, overflow: 'auto' }}>
           <h3 style={{ fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b', marginBottom: 8 }}>Environment State</h3>
           <MetricBar label="Drug Concentration" value={observation.drug_concentration ?? 0} max={2} color="#8b5cf6" />
           <MetricBar label="Efficacy Signal" value={observation.efficacy_signal_estimate ?? 0} max={1} color="#10b981" />
@@ -98,7 +98,41 @@ export default function InteractiveTrial() {
           {observation.disease_progression !== undefined && (
             <MetricBar label="Disease Progression" value={observation.disease_progression ?? 0} max={100} color="#f59e0b" />
           )}
-          <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          
+          <h4 style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: '#64748b', marginTop: 12, marginBottom: 6 }}>Cohort Vitals (Mean)</h4>
+          <div style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 4, background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#94a3b8' }}>Heart Rate:</span>
+              <span style={{ fontWeight: 700 }}>{(observation.mean_heart_rate ?? 75.0).toFixed(0)} bpm</span>
+            </div>
+            {observation.disease === 'type2_diabetes' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Blood Glucose:</span>
+                <span style={{ fontWeight: 700, color: '#10b981' }}>{(observation.mean_glucose ?? 120.0).toFixed(1)} mg/dL</span>
+              </div>
+            )}
+            {observation.disease === 'hypertension' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Blood Pressure:</span>
+                <span style={{ fontWeight: 700, color: '#10b981' }}>{(observation.mean_systolic_bp ?? 120.0).toFixed(0)}/{(observation.mean_diastolic_bp ?? 80.0).toFixed(0)} mmHg</span>
+              </div>
+            )}
+            {observation.disease === 'nsclc' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Tumor Size:</span>
+                <span style={{ fontWeight: 700, color: '#e11d48' }}>{(observation.mean_tumor_size ?? 5.0).toFixed(2)} cm</span>
+              </div>
+            )}
+          </div>
+
+          <h4 style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: '#64748b', marginTop: 12, marginBottom: 6 }}>Demographics</h4>
+          <div style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 8 }}>
+            <div>Ped: <b style={{ color: '#8b5cf6' }}>{observation.pediatric_count ?? 0}</b></div>
+            <div>Adult: <b style={{ color: '#10b981' }}>{observation.adult_count ?? 0}</b></div>
+            <div>Elderly: <b style={{ color: '#f59e0b' }}>{observation.elderly_count ?? 0}</b></div>
+          </div>
+
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
               <div style={{
                 width: 8, height: 8, borderRadius: '50%',

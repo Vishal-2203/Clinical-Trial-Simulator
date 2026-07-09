@@ -1,0 +1,109 @@
+{
+  "type2_diabetes": {
+    "drug_name": "Metformin + GLP-1 Combo",
+    "components": {
+      "biguanide": {
+        "efficacy_weight": 0.4,
+        "toxicity_weight": 0.1,
+        "target_pathway": "AMPK Activation",
+        "chembl_id": "CHEMBL1431"
+      },
+      "glp1_agonist": {
+        "efficacy_weight": 0.6,
+        "toxicity_weight": 0.2,
+        "target_pathway": "GLP-1 Receptor Agonist",
+        "chembl_id": "CHEMBL3989823"
+      },
+      "excipient": {
+        "efficacy_weight": 0.0,
+        "toxicity_weight": 0.0,
+        "target_pathway": "Inactive Formulation",
+        "chembl_id": ""
+      }
+    },
+    "vitals_impact": {
+      "glucose": {
+        "base_range": [140.0, 240.0],
+        "target_max_reduction": 90.0,
+        "unit": "mg/dL"
+      },
+      "heart_rate": {
+        "base_range": [60.0, 90.0],
+        "toxicity_elevation_max": 25.0
+      }
+    }
+  },
+  "hypertension": {
+    "drug_name": "Lisinopril + Amlodipine Combo",
+    "components": {
+      "ace_inhibitor": {
+        "efficacy_weight": 0.5,
+        "toxicity_weight": 0.15,
+        "target_pathway": "Angiotensin Converting Enzyme Inhibitor",
+        "chembl_id": "CHEMBL1235"
+      },
+      "calcium_blocker": {
+        "efficacy_weight": 0.5,
+        "toxicity_weight": 0.2,
+        "target_pathway": "L-type Calcium Channel Blocker",
+        "chembl_id": "CHEMBL174"
+      },
+      "excipient": {
+        "efficacy_weight": 0.0,
+        "toxicity_weight": 0.0,
+        "target_pathway": "Inactive Formulation",
+        "chembl_id": ""
+      }
+    },
+    "vitals_impact": {
+      "systolic_bp": {
+        "base_range": [135.0, 175.0],
+        "target_max_reduction": 45.0,
+        "unit": "mmHg"
+      },
+      "diastolic_bp": {
+        "base_range": [85.0, 110.0],
+        "target_max_reduction": 25.0,
+        "unit": "mmHg"
+      },
+      "heart_rate": {
+        "base_range": [60.0, 85.0],
+        "toxicity_elevation_max": 20.0
+      }
+    }
+  },
+  "nsclc": {
+    "drug_name": "Osimertinib + Cytotoxic Agent",
+    "components": {
+      "egfr_inhibitor": {
+        "efficacy_weight": 0.7,
+        "toxicity_weight": 0.25,
+        "target_pathway": "EGFR Tyrosine Kinase Inhibitor",
+        "chembl_id": "CHEMBL3301594"
+      },
+      "cytotoxic": {
+        "efficacy_weight": 0.3,
+        "toxicity_weight": 0.6,
+        "target_pathway": "DNA Alkylation / Mitotic Inhibition",
+        "chembl_id": "CHEMBL112"
+      },
+      "excipient": {
+        "efficacy_weight": 0.0,
+        "toxicity_weight": 0.0,
+        "target_pathway": "Inactive Formulation",
+        "chembl_id": ""
+      }
+    },
+    "vitals_impact": {
+      "tumor_size": {
+        "base_range": [3.0, 10.0],
+        "target_max_reduction": 6.0,
+        "unit": "cm"
+      },
+      "heart_rate": {
+        "base_range": [60.0, 95.0],
+        "toxicity_elevation_max": 30.0
+      }
+    }
+  }
+}

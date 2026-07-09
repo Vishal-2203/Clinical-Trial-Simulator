@@ -96,6 +96,14 @@ class TrialState:
     fda_flag: str = "monitoring"
     adverse_event_log: List[int] = field(default_factory=list)
     patient_states: List[Any] = field(default_factory=list)
+    pediatric_count: int = 0
+    adult_count: int = 0
+    elderly_count: int = 0
+    mean_heart_rate: float = 75.0
+    mean_glucose: float = 120.0
+    mean_systolic_bp: float = 120.0
+    mean_diastolic_bp: float = 80.0
+    mean_tumor_size: float = 0.0
 
     # ── Pharmacokinetics (2-compartment) ──────────────────────────────────────
     pk_central_concentration: float = 0.0
@@ -208,6 +216,15 @@ class Observation:
     cmo_urgency: int = 0
     nda_probability: float = 0.0
     icer: float = 0.0
+    pediatric_count: int = 0
+    adult_count: int = 0
+    elderly_count: int = 0
+    mean_heart_rate: float = 75.0
+    mean_glucose: float = 120.0
+    mean_systolic_bp: float = 120.0
+    mean_diastolic_bp: float = 80.0
+    mean_tumor_size: float = 0.0
+
 
 
 @dataclass

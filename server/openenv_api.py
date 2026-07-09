@@ -149,6 +149,20 @@ def get_disease_profiles() -> dict:
     return {"profiles": {k.value: v for k, v in config.disease_profiles.items()}}
 
 
+import json
+@app.get("/simulation/disease-priors-v2")
+def get_disease_priors_v2() -> dict:
+    priors_path = Path(__file__).parent.parent / "data" / "snapshots" / "disease_priors_v2.json"
+    if priors_path.exists():
+        with open(priors_path, "r") as f:
+            try:
+                return json.load(f)
+            except Exception:
+                return {}
+    return {}
+
+
+
 @app.post("/simulation/select-disease")
 def select_disease(request: SelectDiseaseRequest) -> dict:
     if request.session_id not in sessions:

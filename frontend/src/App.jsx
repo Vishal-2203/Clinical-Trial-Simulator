@@ -23,9 +23,11 @@ import RegulatoryTimeline from './views/RegulatoryTimeline';
 import EconomicsDashboard from './views/EconomicsDashboard';
 import ConfigModal from './components/ConfigModal';
 import LandingPage from './LandingPage';
+import PatientSimulator from './views/PatientSimulator';
 import { Users, BookOpen, History, ShieldCheck } from 'lucide-react';
 
 const NAV_ITEMS = [
+  { id: 'patient_simulator', label: 'Patient Simulator', icon: Activity, desc: 'Interactive Vitals', group: 'Core' },
   { id: 'trial',       label: 'Interactive Trial',  icon: FlaskConical, desc: 'Control Room',    group: 'Core' },
   { id: 'patients',    label: 'Patient Cohort',      icon: Users,        desc: 'Subject Data',   group: 'Core' },
   { id: 'composition', label: 'Drug Composition',    icon: Beaker,       desc: 'Ratios A/B/C',  group: 'Core' },
@@ -153,6 +155,7 @@ function Sidebar({ active, setActive, onConfig, connected, isAutoRunning, setIsA
 
 const VIEW_MAP = {
   trial: InteractiveTrial,
+  patient_simulator: PatientSimulator,
   patients: PatientCohort,
   evidence: MedicalEvidence,
   composition: DrugComposition,
