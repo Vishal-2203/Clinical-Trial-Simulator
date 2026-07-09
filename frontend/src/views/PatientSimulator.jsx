@@ -612,95 +612,15 @@ export default function PatientSimulator() {
             Physiological Body Scan
           </h3>
 
-          {/* Simple Body Scan Graphic */}
+          {/* Simple 3D Body Render Viewport */}
           <div
             style={{
               height: 180, borderRadius: 12, background: 'rgba(0,0,0,0.25)',
               position: 'relative', overflow: 'hidden'
             }}
           >
-            {/* Embedded custom styling for the glow markers */}
-            <style>{`
-              @keyframes pulseGlow {
-                0% { transform: scale(0.85) translate(-50%, -50%); opacity: 0.5; }
-                50% { transform: scale(1.2) translate(-50%, -50%); opacity: 1; }
-                100% { transform: scale(0.85) translate(-50%, -50%); opacity: 0.5; }
-              }
-              .hotspot-dot {
-                position: absolute;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                cursor: help;
-                transform-origin: 0 0;
-                animation: pulseGlow 1.5s infinite ease-in-out;
-                z-index: 100;
-              }
-            `}</style>
-
             {/* Three.js viewport */}
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-
-            {/* Interactive Glow Markers Overlay */}
-            {/* Brain */}
-            <div 
-              className="hotspot-dot" 
-              style={{
-                top: '15%', left: '50%',
-                background: currentStatus.primaryValue > 170 ? '#ef4444' : '#10b981',
-                boxShadow: `0 0 10px ${currentStatus.primaryValue > 170 ? '#ef4444' : '#10b981'}`
-              }}
-            >
-              <InfoTooltip label="" definition="Brain: High blood pressure (stroke risk) or high glucose causes cognitive fatigue." />
-            </div>
-
-            {/* Heart */}
-            <div 
-              className="hotspot-dot" 
-              style={{
-                top: '32%', left: '46%',
-                background: currentStatus.heartRate > 100 ? '#ef4444' : '#10b981',
-                boxShadow: `0 0 10px ${currentStatus.heartRate > 100 ? '#ef4444' : '#10b981'}`
-              }}
-            >
-              <InfoTooltip label="" definition={`Heart: Pulse is currently ${currentStatus.heartRate} bpm. Affected by beta blockers, CAD, and physical load.`} />
-            </div>
-
-            {/* Lung */}
-            <div 
-              className="hotspot-dot" 
-              style={{
-                top: '32%', left: '54%',
-                background: disease === 'nsclc' ? '#ef4444' : '#10b981',
-                boxShadow: `0 0 10px ${disease === 'nsclc' ? '#ef4444' : '#10b981'}`
-              }}
-            >
-              <InfoTooltip label="" definition="Lungs: Blood oxygenation center. Location of NSCLC tumor. COPD history limits capacity." />
-            </div>
-
-            {/* Pancreas/Liver */}
-            <div 
-              className="hotspot-dot" 
-              style={{
-                top: '46%', left: '51%',
-                background: (disease === 'type2_diabetes' && currentStatus.primaryValue > 200) ? '#f59e0b' : '#3b82f6',
-                boxShadow: `0 0 10px ${(disease === 'type2_diabetes' && currentStatus.primaryValue > 200) ? '#f59e0b' : '#3b82f6'}`
-              }}
-            >
-              <InfoTooltip label="" definition="Pancreas/Liver: Endocrine sugar regulation. Target site for Metformin (reduces glucose synthesis)." />
-            </div>
-
-            {/* Kidney */}
-            <div 
-              className="hotspot-dot" 
-              style={{
-                top: '52%', left: '47%',
-                background: (comorbidities.kidney_disease || dosage > 1.5) ? '#ec4899' : '#10b981',
-                boxShadow: `0 0 10px ${(comorbidities.kidney_disease || dosage > 1.5) ? '#ec4899' : '#10b981'}`
-              }}
-            >
-              <InfoTooltip label="" definition="Kidneys: Excreting filtration system. High drug dosage levels or chronic disease induces nephron strain." />
-            </div>
 
             {/* Visual Pulse Wave overlay */}
             <div style={{ position: 'absolute', bottom: 10, left: 20, fontSize: 10, color: '#475569', fontFamily: 'monospace', zIndex: 10 }}>
