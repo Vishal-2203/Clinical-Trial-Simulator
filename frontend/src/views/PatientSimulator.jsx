@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Beaker, Users, Activity, Heart, ShieldAlert,
-  Flame, TrendingUp, RefreshCw, Zap, ArrowRight
+  Flame, TrendingUp, RefreshCw, Zap, ArrowRight, Play, Pause
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -11,6 +11,44 @@ import {
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
+// Custom tooltip helper for easy medical explanations
+function InfoTooltip({ label, definition }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span 
+      style={{ position: 'relative', borderBottom: '1px dashed rgba(255,255,255,0.3)', cursor: 'help' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {label}
+      {show && (
+        <span style={{
+          position: 'absolute', bottom: '130%', left: '50%', transform: 'translateX(-50%)',
+          background: '#0f111a', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 12px',
+          borderRadius: 8, fontSize: 11, color: '#f8fafc', width: 220, zIndex: 9999,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.85)', pointerEvents: 'none', textAlign: 'left',
+          lineHeight: '1.3'
+        }}>
+          {definition}
+        </span>
+      )}
+    </span>
+  );
+}
+
+const CLINICAL_DEFINITIONS = {
+  "Tachycardia": "Heart rate exceeding 100 beats per minute. Can lead to cardiac fatigue, shortness of breath, and chest pain.",
+  "Severe Tachycardia": "Dangerous heart rate above 120 bpm. Puts heavy mechanical and metabolic strain on the myocardium.",
+  "Diabetic Ketoacidosis": "A life-threatening complication where the body produces excess blood acids (ketones) because of severe insulin deficiency.",
+  "Stroke": "Occurs when blood flow to part of the brain is interrupted, depriving brain tissue of vital oxygen.",
+  "neoplastic cell division": "Uncontrolled cell division forming abnormal tissue growth or tumors.",
+  "Hyperglycemia": "Excessive level of glucose (sugar) circulating in the blood, causing long-term damage to blood vessels and nerves.",
+  "Hypoglycemia": "Abnormally low blood glucose level (< 70 mg/dL), causing shakes, cognitive impairment, and fainting.",
+  "Hypertensive Crisis": "A sudden, severe spike in blood pressure (systolic > 180 mmHg) that can cause stroke or organ failure.",
+  "Renal Stress": "Strain on the kidneys' nephrons, reducing filtration efficiency and potentially causing drug toxicity.",
+  "Hepatic Stress": "Strain on liver hepatocytes, leading to elevated liver enzymes and slower drug detoxification.",
+  "Myocardial Ischemia": "Reduced blood flow and oxygen supply to the heart muscle, potentially causing chest pain (angina)."
+};
 
 const DISEASE_DRUGS = {
   type2_diabetes: {
@@ -55,6 +93,9 @@ export default function PatientSimulator() {
     obesity: false,
     kidney_disease: false,
     high_blood_pressure: false,
+    cad: false,
+    liver_disease: false,
+    copd: false,
   });
 
   // Drug settings
@@ -63,9 +104,11 @@ export default function PatientSimulator() {
   const [compC, setCompC] = useState(0.3);
   const [dosage, setDosage] = useState(1.0);
 
+
   // Simulation timeline
   const [week, setWeek] = useState(0);
   const [timeline, setTimeline] = useState([]);
+  const [isAutoRunning, setIsAutoRunning] = useState(false);
 
   const activeDrug = DISEASE_DRUGS[disease];
 
@@ -74,20 +117,25 @@ export default function PatientSimulator() {
     const ageMultiplier = age > 65 ? 1.3 : (age < 18 ? 0.8 : 1.0);
     const weightMultiplier = weight > 100 ? 1.25 : 1.0;
     
-    // Base clearance factor
+    // Base clearance factor (impacted by weight, age, and kidney/liver disease)
     let clearance = 1.0 / (ageMultiplier * weightMultiplier);
-    if (comorbidities.kidney_disease) clearance *= 0.6; // slower clearance
+    if (comorbidities.kidney_disease) clearance *= 0.6;
+    if (comorbidities.liver_disease) clearance *= 0.5; // Hepatic impairment slows clearance further
 
     // Effective drug concentration in central body compartment
     const concentration = dosage * 1.2 * clearance;
 
-    // Efficacy and toxicity score
-    const efficacyFactor = 0.5 * compA + 0.4 * compB - 0.2 * compC;
-    const toxicityFactor = 0.6 * compC + 0.2 * compB;
+    // Pronounced Composition Sensitivities:
+    // If the active ingredients (compA and compB) are too low or excipient (compC) is too high, efficacy drops off sharply!
+    const activeSum = compA + compB;
+    const formulationEfficacyRatio = activeSum > 0.4 ? (compA * 1.6 + compB * 1.2) : 0.1;
+    const toxicityRatio = compC * 1.8 + compB * 0.6;
 
     // Vitals Calculations
-    let hr = 72 + (toxicityFactor * 25 * dosage * ageMultiplier);
+    let hr = 72 + (toxicityRatio * 28 * dosage * ageMultiplier);
     if (comorbidities.high_blood_pressure) hr += 6;
+    if (comorbidities.cad) hr += 12; // Coronary Artery Disease raises baseline stress
+    if (comorbidities.copd) hr += 8; // COPD hypoxemia causes reflex heart rate elevation
 
     let untreatedDeterioration = 0;
     if (dosage < 0.25) {
@@ -101,18 +149,26 @@ export default function PatientSimulator() {
     }
 
     let primaryValue = activeDrug.baseMetric + untreatedDeterioration;
+    
+    // Calculate primary values with high sensitivity to composition ratios:
     if (disease === 'type2_diabetes') {
-      const reduction = (60 * compA + 90 * compB) * concentration * efficacyFactor;
-      primaryValue = Math.max(75, primaryValue - reduction);
+      // If Metformin ratio (compA) is less than 0.35, drug is highly sub-optimal
+      const compPenalty = compA < 0.35 ? (0.35 - compA) * 120 : 0;
+      const reduction = (55 * compA + 80 * compB) * concentration * formulationEfficacyRatio;
+      primaryValue = Math.max(75, primaryValue - reduction + compPenalty);
     } else if (disease === 'hypertension') {
-      const reduction = (35 * compA + 25 * compB) * concentration * efficacyFactor;
-      primaryValue = Math.max(90, primaryValue - reduction);
+      // If Lisinopril ratio (compA) is low, BP stays elevated
+      const compPenalty = compA < 0.35 ? (0.35 - compA) * 35 : 0;
+      const reduction = (30 * compA + 20 * compB) * concentration * formulationEfficacyRatio;
+      primaryValue = Math.max(90, primaryValue - reduction + compPenalty);
     } else {
-      const reduction = (3.5 * compA + 1.5 * compB) * concentration * efficacyFactor;
-      primaryValue = Math.max(0.1, primaryValue - reduction);
+      // NSCLC: Osimertinib ratio (compA) must be high to shrink tumor
+      const compPenalty = compA < 0.45 ? (0.45 - compA) * 8.0 : 0;
+      const reduction = (3.2 * compA + 1.2 * compB) * concentration * formulationEfficacyRatio;
+      primaryValue = Math.max(0.1, primaryValue - reduction + compPenalty);
     }
 
-    // Danger Level & Simplified Terminology
+    // Danger Level & Terminology
     let dangerScore = 0;
     let warnings = [];
     if (hr > 100) {
@@ -121,7 +177,7 @@ export default function PatientSimulator() {
     }
     if (hr > 120) {
       dangerScore += 2;
-      warnings.push("Critical Cardiac Strain!");
+      warnings.push("Critical Cardiac Strain (Severe Tachycardia)");
     }
 
     if (dosage < 0.25) {
@@ -130,47 +186,55 @@ export default function PatientSimulator() {
         warnings.push(`Untreated Diabetes (Glucose rising +12 mg/dL/week)`);
         if (primaryValue > 220) {
           dangerScore += 1;
-          warnings.push("High risk of Diabetic Ketoacidosis!");
+          warnings.push("High risk of Diabetic Ketoacidosis (severe metabolic acid build-up)!");
         }
       } else if (disease === 'hypertension') {
         warnings.push(`Untreated Hypertension (BP rising +6 mmHg/week)`);
         if (primaryValue > 170) {
           dangerScore += 1;
-          warnings.push("Severe Stroke or Heart Attack warning!");
+          warnings.push("Severe Stroke or Cardiac Infarction (heart attack) hazard!");
         }
       } else {
         warnings.push(`Untreated Cancer (Tumor growing +0.8 cm/week)`);
         if (primaryValue > 8.0) {
           dangerScore += 2;
-          warnings.push("Critical metastatic expansion risk!");
+          warnings.push("Critical metastatic expansion (cancer spreading to other organs)!");
         }
       }
     } else {
       if (disease === 'type2_diabetes') {
         if (primaryValue > 250) {
           dangerScore += 2;
-          warnings.push("Severely High Blood Sugar");
+          warnings.push("Hyperglycemia (dangerously high blood sugar level)");
         }
         if (primaryValue < 80) {
           dangerScore += 1;
-          warnings.push("Low Blood Sugar (Hypoglycemia risk)");
+          warnings.push("Hypoglycemia (low blood sugar risk, causing dizziness/shaking)");
         }
       } else if (disease === 'hypertension') {
         if (primaryValue > 180) {
           dangerScore += 2;
-          warnings.push("Hypertensive Crisis!");
+          warnings.push("Hypertensive Crisis (extreme high blood pressure, risk of organ damage)");
         }
       } else {
         if (primaryValue > 10) {
           dangerScore += 2;
-          warnings.push("Rapid Tumor Growth");
+          warnings.push("Rapid Tumor Growth (uncontrolled neoplastic cell division)");
         }
       }
     }
 
     if (comorbidities.kidney_disease && dosage > 1.5) {
       dangerScore += 1;
-      warnings.push("Renal Stress Alert");
+      warnings.push("Renal Stress Alert (kidney filtration strain due to high drug load)");
+    }
+    if (comorbidities.liver_disease && dosage > 1.5) {
+      dangerScore += 1;
+      warnings.push("Hepatic Stress Alert (liver metabolization strain)");
+    }
+    if (comorbidities.cad && hr > 110) {
+      dangerScore += 2;
+      warnings.push("Myocardial Ischemia Risk (low oxygen supply to heart muscle due to CAD)");
     }
 
     let dangerLevel = "Safe";
@@ -347,20 +411,31 @@ export default function PatientSimulator() {
   }, [disease, activeDrug]);
 
   // Run next step
-  const handleStep = () => {
-    const nextWeek = week + 1;
-    setWeek(nextWeek);
-    setTimeline([
-      ...timeline,
-      {
-        week: nextWeek,
-        heartRate: currentStatus.heartRate,
-        primaryValue: currentStatus.primaryValue,
-      }
-    ]);
-  };
+  const handleStep = React.useCallback(() => {
+    setWeek(prev => {
+      const nextWeek = prev + 1;
+      setTimeline(prevTimeline => [
+        ...prevTimeline,
+        {
+          week: nextWeek,
+          heartRate: currentStatus.heartRate,
+          primaryValue: currentStatus.primaryValue,
+        }
+      ]);
+      return nextWeek;
+    });
+  }, [currentStatus]);
+
+  useEffect(() => {
+    if (!isAutoRunning) return;
+    const interval = setInterval(() => {
+      handleStep();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isAutoRunning, handleStep]);
 
   const handleReset = () => {
+    setIsAutoRunning(false);
     setWeek(0);
     setTimeline([{
       week: 0,
@@ -452,6 +527,9 @@ export default function PatientSimulator() {
                 { id: 'obesity', label: 'Obesity' },
                 { id: 'kidney_disease', label: 'Kidney Disease' },
                 { id: 'high_blood_pressure', label: 'High Blood Pressure' },
+                { id: 'cad', label: 'Coronary Artery Disease (CAD)' },
+                { id: 'liver_disease', label: 'Liver Disease' },
+                { id: 'copd', label: 'COPD / Asthma' },
               ].map((cond) => (
                 <label key={cond.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer', color: '#cbd5e1' }}>
                   <input
@@ -536,19 +614,101 @@ export default function PatientSimulator() {
 
           {/* Simple Body Scan Graphic */}
           <div
-            ref={containerRef}
             style={{
               height: 180, borderRadius: 12, background: 'rgba(0,0,0,0.25)',
-              position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              position: 'relative', overflow: 'hidden'
             }}
           >
+            {/* Embedded custom styling for the glow markers */}
+            <style>{`
+              @keyframes pulseGlow {
+                0% { transform: scale(0.85) translate(-50%, -50%); opacity: 0.5; }
+                50% { transform: scale(1.2) translate(-50%, -50%); opacity: 1; }
+                100% { transform: scale(0.85) translate(-50%, -50%); opacity: 0.5; }
+              }
+              .hotspot-dot {
+                position: absolute;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                cursor: help;
+                transform-origin: 0 0;
+                animation: pulseGlow 1.5s infinite ease-in-out;
+                z-index: 100;
+              }
+            `}</style>
+
+            {/* Three.js viewport */}
+            <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+            {/* Interactive Glow Markers Overlay */}
+            {/* Brain */}
+            <div 
+              className="hotspot-dot" 
+              style={{
+                top: '15%', left: '50%',
+                background: currentStatus.primaryValue > 170 ? '#ef4444' : '#10b981',
+                boxShadow: `0 0 10px ${currentStatus.primaryValue > 170 ? '#ef4444' : '#10b981'}`
+              }}
+            >
+              <InfoTooltip label="" definition="Brain: High blood pressure (stroke risk) or high glucose causes cognitive fatigue." />
+            </div>
+
+            {/* Heart */}
+            <div 
+              className="hotspot-dot" 
+              style={{
+                top: '32%', left: '46%',
+                background: currentStatus.heartRate > 100 ? '#ef4444' : '#10b981',
+                boxShadow: `0 0 10px ${currentStatus.heartRate > 100 ? '#ef4444' : '#10b981'}`
+              }}
+            >
+              <InfoTooltip label="" definition={`Heart: Pulse is currently ${currentStatus.heartRate} bpm. Affected by beta blockers, CAD, and physical load.`} />
+            </div>
+
+            {/* Lung */}
+            <div 
+              className="hotspot-dot" 
+              style={{
+                top: '32%', left: '54%',
+                background: disease === 'nsclc' ? '#ef4444' : '#10b981',
+                boxShadow: `0 0 10px ${disease === 'nsclc' ? '#ef4444' : '#10b981'}`
+              }}
+            >
+              <InfoTooltip label="" definition="Lungs: Blood oxygenation center. Location of NSCLC tumor. COPD history limits capacity." />
+            </div>
+
+            {/* Pancreas/Liver */}
+            <div 
+              className="hotspot-dot" 
+              style={{
+                top: '46%', left: '51%',
+                background: (disease === 'type2_diabetes' && currentStatus.primaryValue > 200) ? '#f59e0b' : '#3b82f6',
+                boxShadow: `0 0 10px ${(disease === 'type2_diabetes' && currentStatus.primaryValue > 200) ? '#f59e0b' : '#3b82f6'}`
+              }}
+            >
+              <InfoTooltip label="" definition="Pancreas/Liver: Endocrine sugar regulation. Target site for Metformin (reduces glucose synthesis)." />
+            </div>
+
+            {/* Kidney */}
+            <div 
+              className="hotspot-dot" 
+              style={{
+                top: '52%', left: '47%',
+                background: (comorbidities.kidney_disease || dosage > 1.5) ? '#ec4899' : '#10b981',
+                boxShadow: `0 0 10px ${(comorbidities.kidney_disease || dosage > 1.5) ? '#ec4899' : '#10b981'}`
+              }}
+            >
+              <InfoTooltip label="" definition="Kidneys: Excreting filtration system. High drug dosage levels or chronic disease induces nephron strain." />
+            </div>
+
             {/* Visual Pulse Wave overlay */}
             <div style={{ position: 'absolute', bottom: 10, left: 20, fontSize: 10, color: '#475569', fontFamily: 'monospace', zIndex: 10 }}>
               PULSE: {currentStatus.heartRate} BPM
             </div>
             {/* 3D Model Marker indicator */}
             <div style={{ position: 'absolute', top: 10, right: 15, fontSize: 8, color: '#64748b', letterSpacing: 1, zIndex: 10 }}>
-              3D MUSCHELMAN ACTIVE
+              3D SCAN ACTIVE
             </div>
           </div>
 
@@ -587,27 +747,50 @@ export default function PatientSimulator() {
               flex: 1, padding: 10, borderRadius: 10, background: 'rgba(0,0,0,0.15)',
               fontSize: 11.5, color: '#cbd5e1', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 6
             }}>
-              {currentStatus.warnings.map((w, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ color: currentStatus.dangerColor }}>•</span>
-                  <span>{w}</span>
-                </div>
-              ))}
+              {currentStatus.warnings.map((w, idx) => {
+                const termMatch = Object.keys(CLINICAL_DEFINITIONS).find(k => w.toLowerCase().includes(k.toLowerCase()));
+                return (
+                  <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                    <span style={{ color: currentStatus.dangerColor }}>•</span>
+                    <span>
+                      {termMatch ? (
+                        <InfoTooltip label={w} definition={CLINICAL_DEFINITIONS[termMatch]} />
+                      ) : (
+                        w
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Action Step */}
-          <button
-            onClick={handleStep}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '12px', borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-              color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              boxShadow: '0 0 12px rgba(59,130,246,0.3)'
-            }}
-          >
-            Advance Week ({week}) <ArrowRight size={14} />
-          </button>
+          {/* Action Step / Auto play */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10 }}>
+            <button
+              onClick={handleStep}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '12px', borderRadius: 10, background: 'rgba(255,255,255,0.06)',
+                color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Step Week ({week}) <ArrowRight size={14} />
+            </button>
+            <button
+              onClick={() => setIsAutoRunning(!isAutoRunning)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '12px', borderRadius: 10, 
+                background: isAutoRunning ? 'rgba(239,68,68,0.2)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                color: '#fff', border: isAutoRunning ? '1px solid rgba(239,68,68,0.4)' : 'none', 
+                fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                boxShadow: isAutoRunning ? 'none' : '0 0 12px rgba(59,130,246,0.3)'
+              }}
+            >
+              {isAutoRunning ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Auto Run</>}
+            </button>
+          </div>
         </div>
 
         {/* Right Column: Dynamic Timeline charts */}
