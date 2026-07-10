@@ -30,6 +30,7 @@ class DiseaseType(str, Enum):
     TYPE2_DIABETES = "type2_diabetes"
     HYPERTENSION = "hypertension"
     NSCLC = "nsclc"
+    DENGUE = "dengue"
 
 
 class ReactionSeverity(str, Enum):
@@ -104,6 +105,7 @@ class TrialState:
     mean_systolic_bp: float = 120.0
     mean_diastolic_bp: float = 80.0
     mean_tumor_size: float = 0.0
+    mean_platelets: float = 250000.0
 
     # ── Pharmacokinetics (2-compartment) ──────────────────────────────────────
     pk_central_concentration: float = 0.0
@@ -224,6 +226,7 @@ class Observation:
     mean_systolic_bp: float = 120.0
     mean_diastolic_bp: float = 80.0
     mean_tumor_size: float = 0.0
+    mean_platelets: float = 250000.0
 
 
 

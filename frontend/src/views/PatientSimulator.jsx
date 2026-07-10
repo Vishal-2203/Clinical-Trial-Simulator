@@ -47,7 +47,9 @@ const CLINICAL_DEFINITIONS = {
   "Hypertensive Crisis": "A sudden, severe spike in blood pressure (systolic > 180 mmHg) that can cause stroke or organ failure.",
   "Renal Stress": "Strain on the kidneys' nephrons, reducing filtration efficiency and potentially causing drug toxicity.",
   "Hepatic Stress": "Strain on liver hepatocytes, leading to elevated liver enzymes and slower drug detoxification.",
-  "Myocardial Ischemia": "Reduced blood flow and oxygen supply to the heart muscle, potentially causing chest pain (angina)."
+  "Myocardial Ischemia": "Reduced blood flow and oxygen supply to the heart muscle, potentially causing chest pain (angina).",
+  "Thrombocytopenia": "Abnormally low platelet count in blood (< 100k cells/mcL), raising bleeding risk and indicating systemic viral impact.",
+  "Severe Plasma Leakage Shock": "Critical leakage of blood fluid from vessels due to secondary dengue, causing organ failure and drop in blood volume."
 };
 
 const DISEASE_DRUGS = {
@@ -69,6 +71,16 @@ const DISEASE_DRUGS = {
     baseMetric: 155,
     a: { name: "Lisinopril Ratio", desc: "Vasodilator (opens arteries)" },
     b: { name: "Amlodipine Ratio", desc: "Calcium block (relaxes muscles)" },
+    c: { name: "Excipient Ratio", desc: "Inactive formulation binder" }
+  },
+  dengue: {
+    name: "Dengue Fever",
+    drugName: "Qdenga Vaccine + Antiviral",
+    metricName: "Platelet Count",
+    metricUnit: "cells/mcL",
+    baseMetric: 110000,
+    a: { name: "TAK-003 Antigen Ratio", desc: "Stimulates antibody response" },
+    b: { name: "Antiviral Inhibitor Ratio", desc: "Inhibits viral replication" },
     c: { name: "Excipient Ratio", desc: "Inactive formulation binder" }
   },
   nsclc: {
@@ -96,6 +108,7 @@ export default function PatientSimulator() {
     cad: false,
     liver_disease: false,
     copd: false,
+    prior_dengue: false,
   });
 
   // Drug settings
@@ -143,6 +156,8 @@ export default function PatientSimulator() {
         untreatedDeterioration = week * 12;
       } else if (disease === 'hypertension') {
         untreatedDeterioration = week * 6;
+      } else if (disease === 'dengue') {
+        untreatedDeterioration = week * (comorbidities.prior_dengue ? -28000 : -15000);
       } else {
         untreatedDeterioration = week * 0.8;
       }
@@ -152,17 +167,18 @@ export default function PatientSimulator() {
     
     // Calculate primary values with high sensitivity to composition ratios:
     if (disease === 'type2_diabetes') {
-      // If Metformin ratio (compA) is less than 0.35, drug is highly sub-optimal
       const compPenalty = compA < 0.35 ? (0.35 - compA) * 120 : 0;
       const reduction = (55 * compA + 80 * compB) * concentration * formulationEfficacyRatio;
       primaryValue = Math.max(75, primaryValue - reduction + compPenalty);
     } else if (disease === 'hypertension') {
-      // If Lisinopril ratio (compA) is low, BP stays elevated
       const compPenalty = compA < 0.35 ? (0.35 - compA) * 35 : 0;
       const reduction = (30 * compA + 20 * compB) * concentration * formulationEfficacyRatio;
       primaryValue = Math.max(90, primaryValue - reduction + compPenalty);
+    } else if (disease === 'dengue') {
+      const compPenalty = compA < 0.40 ? (0.40 - compA) * -35000 : 0;
+      const recovery = (45 * compA + 30 * compB) * concentration * formulationEfficacyRatio * 1000;
+      primaryValue = Math.min(400000, Math.max(10000, primaryValue + recovery + compPenalty));
     } else {
-      // NSCLC: Osimertinib ratio (compA) must be high to shrink tumor
       const compPenalty = compA < 0.45 ? (0.45 - compA) * 8.0 : 0;
       const reduction = (3.2 * compA + 1.2 * compB) * concentration * formulationEfficacyRatio;
       primaryValue = Math.max(0.1, primaryValue - reduction + compPenalty);
@@ -194,6 +210,12 @@ export default function PatientSimulator() {
           dangerScore += 1;
           warnings.push("Severe Stroke or Cardiac Infarction (heart attack) hazard!");
         }
+      } else if (disease === 'dengue') {
+        warnings.push(`Untreated Dengue (Platelets dropping ${comorbidities.prior_dengue ? '-28,000' : '-15,000'} cells/mcL/week)`);
+        if (primaryValue < 60000) {
+          dangerScore += 2;
+          warnings.push("Severe Plasma Leakage Shock risk!");
+        }
       } else {
         warnings.push(`Untreated Cancer (Tumor growing +0.8 cm/week)`);
         if (primaryValue > 8.0) {
@@ -215,6 +237,15 @@ export default function PatientSimulator() {
         if (primaryValue > 180) {
           dangerScore += 2;
           warnings.push("Hypertensive Crisis (extreme high blood pressure, risk of organ damage)");
+        }
+      } else if (disease === 'dengue') {
+        if (primaryValue < 100000) {
+          dangerScore += 1;
+          warnings.push("Thrombocytopenia (dangerously low platelet count)");
+        }
+        if (primaryValue < 50000) {
+          dangerScore += 2;
+          warnings.push("Severe Plasma Leakage Shock risk!");
         }
       } else {
         if (primaryValue > 10) {
@@ -466,6 +497,7 @@ export default function PatientSimulator() {
           >
             <option value="type2_diabetes" style={{ background: '#0f111a', color: '#f8fafc' }}>Type 2 Diabetes</option>
             <option value="hypertension" style={{ background: '#0f111a', color: '#f8fafc' }}>Hypertension</option>
+            <option value="dengue" style={{ background: '#0f111a', color: '#f8fafc' }}>Dengue Fever</option>
             <option value="nsclc" style={{ background: '#0f111a', color: '#f8fafc' }}>Lung Cancer (NSCLC)</option>
           </select>
           <button
@@ -530,6 +562,7 @@ export default function PatientSimulator() {
                 { id: 'cad', label: 'Coronary Artery Disease (CAD)' },
                 { id: 'liver_disease', label: 'Liver Disease' },
                 { id: 'copd', label: 'COPD / Asthma' },
+                { id: 'prior_dengue', label: 'Prior Dengue Infection (Severe Risk)' },
               ].map((cond) => (
                 <label key={cond.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer', color: '#cbd5e1' }}>
                   <input

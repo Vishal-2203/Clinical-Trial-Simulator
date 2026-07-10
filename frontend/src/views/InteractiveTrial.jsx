@@ -123,6 +123,12 @@ export default function InteractiveTrial() {
                 <span style={{ fontWeight: 700, color: '#e11d48' }}>{(observation.mean_tumor_size ?? 5.0).toFixed(2)} cm</span>
               </div>
             )}
+            {observation.disease === 'dengue' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Platelets:</span>
+                <span style={{ fontWeight: 700, color: '#10b981' }}>{(observation.mean_platelets ?? 250000.0).toFixed(0)} cells/mcL</span>
+              </div>
+            )}
           </div>
 
           <h4 style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: '#64748b', marginTop: 12, marginBottom: 6 }}>Demographics</h4>

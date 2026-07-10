@@ -134,6 +134,15 @@ export default function LandingPage({ onStart }) {
               >
                 Launch the Simulator <ArrowRight size={16} />
               </motion.button>
+              <motion.button
+                id="hero-cta-novel-pathogen"
+                onClick={() => onStart('novel_pathogen')}
+                whileHover={{ scale: 1.04, boxShadow: `0 0 32px ${T.teal}50` }}
+                whileTap={{ scale: 0.97 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: T.teal, border: 'none', borderRadius: 10, color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', boxShadow: `0 0 20px ${T.teal}35` }}
+              >
+                Open Novel Pathogen Analyzer <ArrowRight size={16} />
+              </motion.button>
               <a
                 href="#how-it-works"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 10, color: '#94a3b8', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', transition: 'border-color 0.2s, color 0.2s' }}

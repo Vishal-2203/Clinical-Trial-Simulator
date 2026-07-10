@@ -23,7 +23,7 @@ def generate_synthetic_patients(count: int, seed: int = 17, disease: DiseaseType
             
         # Comorbidities scale with age
         comorb_chance = 0.4 if age_group == "elderly" else (0.2 if age_group == "adult" else 0.05)
-        comorbidities = [c for c in ["hypertension", "ckd", "obesity"] if rng.random() < comorb_chance]
+        comorbidities = [c for c in ["hypertension", "ckd", "obesity", "prior_dengue"] if rng.random() < comorb_chance]
         
         # Vitals depend on the disease and age group
         vitals = {"hr": rng.uniform(65.0, 85.0)}
@@ -35,6 +35,11 @@ def generate_synthetic_patients(count: int, seed: int = 17, disease: DiseaseType
             vitals["glucose"] = rng.uniform(80.0, 120.0)
             vitals["sbp"] = rng.uniform(135.0, 175.0)
             vitals["dbp"] = rng.uniform(85.0, 110.0)
+        elif disease == DiseaseType.DENGUE:
+            vitals["platelets"] = rng.uniform(100000.0, 130000.0)
+            vitals["glucose"] = rng.uniform(80.0, 120.0)
+            vitals["sbp"] = rng.uniform(110.0, 130.0)
+            vitals["dbp"] = rng.uniform(70.0, 85.0)
         else: # NSCLC
             vitals["tumor_size"] = rng.uniform(3.0, 10.0)
             vitals["glucose"] = rng.uniform(80.0, 120.0)

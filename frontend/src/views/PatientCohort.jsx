@@ -82,7 +82,7 @@ export default function PatientCohort() {
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px' }}>
               <thead>
                 <tr style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b', textAlign: 'left' }}>
-                  {['ID', 'Status', 'Age (Group)', 'Sex', 'Heart Rate', disease === 'type2_diabetes' ? 'Glucose' : (disease === 'hypertension' ? 'BP (S/D)' : 'Tumor Size'), 'AEs'].map(h => (
+                  {['ID', 'Status', 'Age (Group)', 'Sex', 'Heart Rate', disease === 'type2_diabetes' ? 'Glucose' : (disease === 'hypertension' ? 'BP (S/D)' : (disease === 'dengue' ? 'Platelets' : 'Tumor Size')), 'AEs'].map(h => (
                     <th key={h} style={{ padding: '0 10px 8px' }}>{h}</th>
                   ))}
                 </tr>
@@ -100,6 +100,8 @@ export default function PatientCohort() {
                     primaryMetric = vitals.glucose ? `${vitals.glucose.toFixed(1)} mg/dL` : '140.0 mg/dL';
                   } else if (disease === 'hypertension') {
                     primaryMetric = vitals.sbp ? `${vitals.sbp.toFixed(0)}/${vitals.dbp?.toFixed(0)} mmHg` : '120/80 mmHg';
+                  } else if (disease === 'dengue') {
+                    primaryMetric = vitals.platelets ? `${vitals.platelets.toFixed(0)} cells/mcL` : '250000 cells/mcL';
                   } else {
                     primaryMetric = vitals.tumor_size ? `${vitals.tumor_size.toFixed(2)} cm` : '5.00 cm';
                   }

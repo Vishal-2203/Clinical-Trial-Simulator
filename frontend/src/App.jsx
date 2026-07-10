@@ -21,6 +21,7 @@ import StatisticalEngine from './views/StatisticalEngine';
 import DSMBConsole from './views/DSMBConsole';
 import RegulatoryTimeline from './views/RegulatoryTimeline';
 import EconomicsDashboard from './views/EconomicsDashboard';
+import NovelPathogenAnalyzer from './views/NovelPathogenAnalyzer';
 import ConfigModal from './components/ConfigModal';
 import LandingPage from './LandingPage';
 import PatientSimulator from './views/PatientSimulator';
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { id: 'regulatory',  label: 'Regulatory',           icon: FileCheck,    desc: 'IND→NDA',       group: 'Operations' },
   { id: 'economics',   label: 'Pharmacoeconomics',   icon: DollarSign,   desc: 'ICER & QALY',   group: 'Operations' },
   { id: 'evidence',    label: 'Medical Evidence',     icon: BookOpen,     desc: 'PubMed / FDA',  group: 'Intelligence' },
+  { id: 'novel_pathogen', label: 'Novel Pathogen',    icon: Beaker,       desc: 'DTI Predictor', group: 'Intelligence' },
   { id: 'agents',      label: 'Agent Analysis',       icon: ShieldCheck,  desc: 'CMO Briefing',  group: 'Intelligence' },
   { id: 'worldnews',   label: 'Global Med News',      icon: Globe,        desc: 'Live World Map', group: 'Intelligence' },
   { id: 'benchmarks',  label: 'Policy Benchmarks',   icon: TrendingUp,   desc: 'Analytics',     group: 'Intelligence' },
@@ -158,6 +160,7 @@ const VIEW_MAP = {
   patient_simulator: PatientSimulator,
   patients: PatientCohort,
   evidence: MedicalEvidence,
+  novel_pathogen: NovelPathogenAnalyzer,
   composition: DrugComposition,
   benchmarks: PolicyBenchmarks,
   agents: AgentAnalysis,
@@ -211,7 +214,7 @@ export default function App() {
   const connected = !!sessionId && sessionId !== 'offline-demo';
 
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)} />;
+    return <LandingPage onStart={(view = 'trial') => { setActiveView(view); setShowLanding(false); }} />;
   }
 
   if (loading) {

@@ -4,12 +4,15 @@ import uuid
 import random
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import sys as _sys
 
-from fastapi import FastAPI, Query
-from pydantic import BaseModel
+_sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from fastapi import FastAPI, Query, HTTPException
+from pydantic import BaseModel, Field
 
 from cts.config import default_config
-from cts.environment.models import Action, ActionType
+from cts.environment.models import Action, ActionType, DiseaseType
 from cts.environment.trial_env import TrialEnv
 from eval.analytics import load_latest_benchmark_report
 from eval.run_benchmark import run_benchmark
@@ -45,13 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Serve the built frontend
-dist_path = Path(__file__).parent.parent / "frontend" / "dist"
-if dist_path.exists():
-    app.mount("/", StaticFiles(directory=str(dist_path), html=True), name="static")
-else:
-    print(f"Warning: {dist_path} not found. UI will not be served.")
 from fastapi import HTTPException
 from cts.data.realworld_apis import fetch_clinical_trials, fetch_adverse_events, fetch_recent_literature
 from cts.data.serp_scanner import fetch_medical_news
@@ -128,7 +124,127 @@ def chembl_disease_priors() -> dict:
         return _json.load(f)
 
 
+# ──────────────────────────────────────────────
+# DTI / Novel Pathogen Endpoints
+# ──────────────────────────────────────────────
+
+
+class DTIPathogenInput(BaseModel):
+    name: str | None = None
+    sequence: str | None = None
+    description: str | None = None
+
+
+class DTIDrugInput(BaseModel):
+    input: str | None = None
+    smiles: str | None = None
+    name: str | None = None
+    ratio: float = 1.0
+    dosage_mg: float | None = None
+
+
+class DTIAnalyzeRequest(BaseModel):
+    pathogen_input: str | None = None
+    pathogen: DTIPathogenInput | str | None = None
+    drugs: list[DTIDrugInput | dict] = Field(default_factory=list)
+    patient: dict = Field(default_factory=dict)
+    device: str = "auto"
+
+
+_dti_predictor = None
+
+def _get_dti_predictor():
+    global _dti_predictor
+    if _dti_predictor is None:
+        try:
+            from cts.dti.predictor import DTIPredictor
+            _dti_predictor = DTIPredictor()
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"DTI model unavailable: {e}")
+    return _dti_predictor
+
+
+def _normalize_pathogen_input(req: DTIAnalyzeRequest) -> str:
+    if req.pathogen_input:
+        return req.pathogen_input
+    pathogen = req.pathogen
+    if isinstance(pathogen, str):
+        return pathogen
+    if isinstance(pathogen, DTIPathogenInput):
+        return pathogen.sequence or pathogen.description or pathogen.name or ""
+    if isinstance(pathogen, dict):
+        return str(pathogen.get("sequence") or pathogen.get("description") or pathogen.get("name") or "")
+    return ""
+
+
+def _normalize_drugs(drugs: list[DTIDrugInput | dict]) -> list[dict]:
+    normalized = []
+    for drug in drugs:
+        if isinstance(drug, DTIDrugInput):
+            data = drug.model_dump()
+        else:
+            data = dict(drug)
+        normalized.append({
+            "input": data.get("input") or data.get("smiles") or data.get("name") or "",
+            "ratio": float(data.get("ratio", 1.0) or 1.0),
+            "dosage_mg": data.get("dosage_mg"),
+        })
+    return normalized
+
+
+@app.post("/dti/analyze")
+def dti_analyze(req: DTIAnalyzeRequest) -> dict:
+    """Predict drug efficacy for any pathogen (novel or known). Accepts FASTA or text description."""
+    pathogen_input = _normalize_pathogen_input(req).strip()
+    drugs = _normalize_drugs(req.drugs)
+    if not pathogen_input or not drugs:
+        raise HTTPException(status_code=422, detail="pathogen_input/pathogen and at least one drug are required.")
+    predictor = _get_dti_predictor()
+    return predictor.predict(pathogen_input, drugs, req.patient)
+
+
+@app.get("/dti/model-status")
+def dti_model_status() -> dict:
+    """Return DTI model training status and validation metrics."""
+    try:
+        return _get_dti_predictor().model_status()
+    except Exception as e:
+        return {"trained": False, "error": str(e)}
+
+
+@app.get("/dti/drug-lookup")
+def dti_drug_lookup(name: str = Query(...)) -> dict:
+    """Look up a drug by name in ChEMBL 37 and return SMILES + molecular properties."""
+    try:
+        from cts.dti.encoders import DrugEncoder
+        enc = DrugEncoder()
+        smiles = enc.lookup_smiles(name)
+        if not smiles:
+            raise HTTPException(status_code=404, detail=f"Drug '{name}' not found in ChEMBL 37.")
+        props = {}
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import Descriptors, rdMolDescriptors
+            mol = Chem.MolFromSmiles(smiles)
+            if mol:
+                props = {
+                    "molecular_weight": round(Descriptors.MolWt(mol), 2),
+                    "alogp": round(Descriptors.MolLogP(mol), 3),
+                    "tpsa": round(Descriptors.TPSA(mol), 2),
+                    "hbd": rdMolDescriptors.CalcNumHBD(mol),
+                    "hba": rdMolDescriptors.CalcNumHBA(mol),
+                }
+        except Exception:
+            pass
+        return {"name": name, "smiles": smiles, "properties": props}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/analytics/efficiency-by-disease")
+
 
 def efficiency_by_disease(policy: str = Query(default="trained")) -> dict:
     report = _benchmark_report()
@@ -564,4 +680,12 @@ def get_endpoints(session_id: str) -> dict:
         "control_n": s.control_arm_size,
         "week": s.week,
     }
+
+
+# Serve the built frontend after API routes so it does not shadow them.
+dist_path = Path(__file__).parent.parent / "frontend" / "dist"
+if dist_path.exists():
+    app.mount("/", StaticFiles(directory=str(dist_path), html=True), name="static")
+else:
+    print(f"Warning: {dist_path} not found. UI will not be served.")
 

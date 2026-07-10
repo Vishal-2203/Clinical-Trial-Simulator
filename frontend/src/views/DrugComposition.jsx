@@ -24,6 +24,12 @@ const DISEASE_DRUGS = {
     a: { name: "EGFR Inhibitor (Osimertinib)", pathway: "EGFR Tyrosine Kinase", desc: "Targets EGFR mutant cancer cells" },
     b: { name: "Cytotoxic Agent (Chemo)", pathway: "DNA Alkylation", desc: "Non-specific cancer cell destruction" },
     c: { name: "Excipient", pathway: "Inactive Formulation", desc: "Formulation binder" }
+  },
+  dengue: {
+    drugName: "Qdenga Vaccine + Antiviral",
+    a: { name: "Attenuated Virus (TAK-003)", pathway: "Antibody Response", desc: "Neutralizes circulating dengue serotypes" },
+    b: { name: "Neutralizing Antiviral", pathway: "Replication Inhibitor", desc: "Blocks intracellular viral assembly" },
+    c: { name: "Excipient (Adjuvant)", pathway: "Inactive Formulation", desc: "Formulation binder & immune booster" }
   }
 };
 

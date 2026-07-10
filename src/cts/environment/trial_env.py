@@ -421,6 +421,15 @@ class TrialEnv:
             cmo_urgency=state.cmo_urgency,
             nda_probability=state.nda_probability,
             icer=state.icer,
+            pediatric_count=state.pediatric_count,
+            adult_count=state.adult_count,
+            elderly_count=state.elderly_count,
+            mean_heart_rate=state.mean_heart_rate,
+            mean_glucose=state.mean_glucose,
+            mean_systolic_bp=state.mean_systolic_bp,
+            mean_diastolic_bp=state.mean_diastolic_bp,
+            mean_tumor_size=state.mean_tumor_size,
+            mean_platelets=state.mean_platelets,
         )
 
     def _normalize_composition(self, composition: dict[str, float]) -> dict[str, float]:
