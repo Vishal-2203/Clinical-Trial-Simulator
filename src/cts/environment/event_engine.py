@@ -35,6 +35,23 @@ class EventEngine:
         except Exception:
             pass
 
+    def _get_chembl_weights(self, disease_key: str) -> dict:
+        """Return ChEMBL-calibrated (efficacy_a, efficacy_b, toxicity_a, toxicity_b) for a disease."""
+        try:
+            disease_data = self._priors.get(disease_key, {})
+            components = disease_data.get("components", {})
+            keys = list(components.keys())
+            comp_a = components.get(keys[0], {}) if keys else {}
+            comp_b = components.get(keys[1], {}) if len(keys) > 1 else {}
+            return {
+                "eff_a": comp_a.get("efficacy_weight", 0.4),
+                "eff_b": comp_b.get("efficacy_weight", 0.3),
+                "tox_a": comp_a.get("toxicity_weight", 0.1),
+                "tox_b": comp_b.get("toxicity_weight", 0.15),
+            }
+        except Exception:
+            return {"eff_a": 0.4, "eff_b": 0.3, "tox_a": 0.1, "tox_b": 0.15}
+
     def transition_patient(self, state: PatientTrialState, global_composition: dict[str, float]) -> PatientTrialState:
         # Update composition exposure
         state.composition_exposure = dict(global_composition)
@@ -46,14 +63,19 @@ class EventEngine:
         concentration = getattr(state, "drug_concentration", 1.0)
         pd_effect = (1.5 * concentration) / (0.5 + concentration) if concentration > 0 else 0.0
         
-        # Base efficacy and toxicity probabilities
-        eff_prob = 0.4 * c_a + 0.3 * c_b - 0.1 * c_c
+        # Resolve ChEMBL-calibrated weights for this patient's disease
+        disease_key = state.profile.disease.value if hasattr(state.profile.disease, "value") else str(state.profile.disease)
+        w = self._get_chembl_weights(disease_key)
+
+        # Base efficacy and toxicity probabilities using real ChEMBL IC50-derived weights
+        eff_prob = w["eff_a"] * c_a + w["eff_b"] * c_b - 0.1 * c_c
         if state.profile.disease_stage == "severe":
             eff_prob *= 0.8
         eff_prob += 0.1 * state.profile.biomarkers.get("marker_a", 0.5)
         state.efficacy_response = min(1.0, max(0.0, eff_prob + random.uniform(-0.05, 0.05)))
         
-        tox_prob = 0.5 * c_c + 0.15 * c_b
+        # Toxicity probability from ChEMBL AlogP-derived weights
+        tox_prob = w["tox_a"] * c_a + w["tox_b"] * c_b + 0.4 * c_c
         if state.profile.age_group == "elderly":
             tox_prob *= 1.3
         if "ckd" in state.profile.comorbidities:
@@ -65,9 +87,12 @@ class EventEngine:
         if state.profile.disease == DiseaseType.TYPE2_DIABETES:
             # Efficacy lowers glucose, but toxicity elevates heart rate
             if state.assigned_arm == "treatment":
-                reduction = (60 * c_a + 100 * c_b) * pd_effect
+                # ChEMBL: Metformin eff_a=0.42, Semaglutide eff_b=0.882
+                # Glucose reduction scales with real-world HbA1c efficacy
+                reduction = (90 * w["eff_a"] * c_a + 130 * w["eff_b"] * c_b) * pd_effect
                 vitals["glucose"] = max(80.0, vitals.get("glucose", 150.0) - reduction + random.uniform(-5.0, 5.0))
-                hr_elevation = (12 * c_b + 5 * c_c) * pd_effect
+                # GLP-1 causes mild tachycardia (real-world side effect)
+                hr_elevation = (15 * w["tox_b"] * c_b + 5 * c_c) * pd_effect
                 vitals["hr"] = min(130.0, vitals.get("hr", 72.0) + hr_elevation + random.uniform(-2.0, 2.0))
             else:
                 # Placebo / untreated progression
@@ -76,23 +101,38 @@ class EventEngine:
                 
         elif state.profile.disease == DiseaseType.HYPERTENSION:
             if state.assigned_arm == "treatment":
-                sbp_red = (35 * c_a + 25 * c_b) * pd_effect
-                dbp_red = (20 * c_a + 12 * c_b) * pd_effect
+                # ChEMBL: Lisinopril eff_a=0.593 (ACEi), Amlodipine eff_b=0.659 (CCB)
+                sbp_red = (55 * w["eff_a"] * c_a + 42 * w["eff_b"] * c_b) * pd_effect
+                dbp_red = (30 * w["eff_a"] * c_a + 22 * w["eff_b"] * c_b) * pd_effect
                 vitals["sbp"] = max(90.0, vitals.get("sbp", 145.0) - sbp_red + random.uniform(-3.0, 3.0))
                 vitals["dbp"] = max(60.0, vitals.get("dbp", 92.0) - dbp_red + random.uniform(-2.0, 2.0))
-                # Reflex tachycardia from CCB
-                hr_elevation = (8 * c_b + 4 * c_c) * pd_effect
+                # Reflex tachycardia from CCB - real side effect, scaled to AlogP toxicity
+                hr_elevation = (12 * w["tox_b"] * c_b + 4 * c_c) * pd_effect
                 vitals["hr"] = min(125.0, vitals.get("hr", 70.0) + hr_elevation + random.uniform(-2.0, 2.0))
             else:
                 vitals["sbp"] = min(200.0, vitals.get("sbp", 145.0) + 0.8 + random.uniform(-2.0, 2.0))
                 vitals["dbp"] = min(120.0, vitals.get("dbp", 92.0) + 0.5 + random.uniform(-1.0, 1.0))
                 vitals["hr"] = vitals.get("hr", 70.0) + random.uniform(-1.0, 1.0)
                 
+        elif state.profile.disease == DiseaseType.DENGUE:
+            if state.assigned_arm == "treatment":
+                # ChEMBL: Tecovirimat antiviral eff_b=0.95 (IC50=5.3nM)
+                # Brefeldin A analogs eff_a modeled at 0.60 from vaccine arm
+                recovery = (55000 * w["eff_a"] * c_a + 48000 * w["eff_b"] * c_b) * pd_effect
+                vitals["platelets"] = min(400000.0, vitals.get("platelets", 110000.0) + recovery + random.uniform(-1000.0, 1000.0))
+                hr_elevation = (8 * w["tox_a"] * c_a + 4 * c_c) * pd_effect
+                vitals["hr"] = min(120.0, vitals.get("hr", 72.0) + hr_elevation + random.uniform(-1.0, 1.0))
+            else:
+                vitals["platelets"] = max(20000.0, vitals.get("platelets", 110000.0) - 15000.0 + random.uniform(-2000.0, 2000.0))
+                vitals["hr"] = vitals.get("hr", 72.0) + random.uniform(-1.0, 1.0)
+                
         else: # NSCLC
             if state.assigned_arm == "treatment":
-                shrinkage = (4.5 * c_a + 2.0 * c_b) * pd_effect
+                # ChEMBL: Osimertinib eff_a=0.889 (Ki=82.9nM, EGFR T790M)
+                shrinkage = (7.5 * w["eff_a"] * c_a + 3.0 * w["eff_b"] * c_b) * pd_effect
                 vitals["tumor_size"] = max(0.1, vitals.get("tumor_size", 5.0) - shrinkage + random.uniform(-0.2, 0.2))
-                hr_elevation = (10 * c_b + 8 * c_c) * pd_effect
+                # Osimertinib AlogP=4.51 → moderate cardiac toxicity
+                hr_elevation = (14 * w["tox_a"] * c_a + 10 * w["tox_b"] * c_b + 8 * c_c) * pd_effect
                 vitals["hr"] = min(140.0, vitals.get("hr", 75.0) + hr_elevation + random.uniform(-3.0, 3.0))
             else:
                 vitals["tumor_size"] = min(15.0, vitals.get("tumor_size", 5.0) + 0.15 + random.uniform(-0.05, 0.05))
@@ -113,11 +153,14 @@ class EventEngine:
         if vitals.get("tumor_size", 0.0) > 12.0:
             is_serious = True
             grade = 4
+        if vitals.get("platelets", 250000.0) < 50000.0:
+            is_serious = True
+            grade = 4
 
         if random.random() < tox_prob or is_serious:
             grade = max(grade, 3 if is_serious else (3 if random.random() < 0.2 else 1))
             ae = {
-                "term": "Tachycardia" if vitals.get("hr", 70.0) > 110.0 else ("Hyperglycemia" if vitals.get("glucose", 120.0) > 250.0 else "Nausea"),
+                "term": "Thrombocytopenia" if vitals.get("platelets", 250000.0) < 100000.0 else ("Tachycardia" if vitals.get("hr", 70.0) > 110.0 else ("Hyperglycemia" if vitals.get("glucose", 120.0) > 250.0 else "Nausea")),
                 "grade": grade,
                 "is_serious": grade >= 3,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -237,6 +280,7 @@ class EventEngine:
             next_state.mean_systolic_bp = sum(p.profile.vitals.get("sbp", 120.0) for p in active_pats) / len(active_pats)
             next_state.mean_diastolic_bp = sum(p.profile.vitals.get("dbp", 80.0) for p in active_pats) / len(active_pats)
             next_state.mean_tumor_size = sum(p.profile.vitals.get("tumor_size", 0.0) for p in active_pats) / len(active_pats)
+            next_state.mean_platelets = sum(p.profile.vitals.get("platelets", 250000.0) for p in active_pats) / len(active_pats)
         else:
             next_state.pediatric_count = 0
             next_state.adult_count = 0
@@ -246,6 +290,7 @@ class EventEngine:
             next_state.mean_systolic_bp = 120.0
             next_state.mean_diastolic_bp = 80.0
             next_state.mean_tumor_size = 0.0
+            next_state.mean_platelets = 250000.0
 
         return next_state
 

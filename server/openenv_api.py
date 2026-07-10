@@ -94,8 +94,42 @@ def openenv_metadata() -> dict:
         "stage": config.stage,
     }
 
+import json as _json
+
+
+@app.get("/chembl/drug-data")
+def chembl_drug_data() -> dict:
+    """Return ChEMBL-calibrated pharmacological parameters for all simulated drugs."""
+    chembl_path = Path(__file__).parent.parent / "data" / "snapshots" / "chembl_drug_params.json"
+    if not chembl_path.exists():
+        raise HTTPException(status_code=503, detail="ChEMBL data not yet extracted.")
+    with open(chembl_path) as f:
+        return _json.load(f)
+
+
+@app.get("/chembl/dengue-candidates")
+def chembl_dengue_candidates() -> dict:
+    """Return top Dengue antiviral compound candidates from ChEMBL (sorted by IC50)."""
+    dengue_path = Path(__file__).parent.parent / "data" / "snapshots" / "dengue_compounds.json"
+    if not dengue_path.exists():
+        raise HTTPException(status_code=503, detail="Dengue compounds data not available.")
+    with open(dengue_path) as f:
+        compounds = _json.load(f)
+    return {"candidates": compounds, "source": "ChEMBL 37", "target": "Dengue virus IC50 < 1000 nM"}
+
+
+@app.get("/chembl/disease-priors")
+def chembl_disease_priors() -> dict:
+    """Return ChEMBL-calibrated disease priors used by the simulation engine."""
+    priors_path = Path(__file__).parent.parent / "data" / "snapshots" / "disease_priors_v2.json"
+    if not priors_path.exists():
+        raise HTTPException(status_code=503, detail="Disease priors file not found.")
+    with open(priors_path) as f:
+        return _json.load(f)
+
 
 @app.get("/analytics/efficiency-by-disease")
+
 def efficiency_by_disease(policy: str = Query(default="trained")) -> dict:
     report = _benchmark_report()
     policy_metrics = report.get("disease_metrics", {}).get(policy, {})

@@ -143,6 +143,16 @@ class TrialConfig(BaseModel):
                 "drift_rate": 0.035,
                 "metric_name": "Tumor Size",
             },
+            DiseaseType.DENGUE: {
+                "name": "Dengue Fever",
+                "baseline_response": 0.55,
+                "toxicity_sensitivity": 0.12,
+                "fatality_floor": 0.0015,
+                "major_threshold": 0.60,
+                "fatal_threshold": 0.85,
+                "drift_rate": 0.025,
+                "metric_name": "Platelet Count",
+            },
         }
     )
     recruitment_cost_per_patient: float = Field(default=4000.0, gt=0)
