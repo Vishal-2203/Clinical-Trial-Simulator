@@ -1,3 +1,4 @@
+// Updated: 2026-08-13 - UI improvements
 import React, { useEffect, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 import { useTrialStore } from '../store';

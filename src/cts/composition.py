@@ -1,3 +1,4 @@
+"""Drug Composition and Dynamics - Updated 2026-08-13"""
 from __future__ import annotations
 
 from dataclasses import dataclass

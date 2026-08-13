@@ -1,3 +1,4 @@
+// Updated: 2026-08-13 - Optimization and maintenance update
 import React, { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import {

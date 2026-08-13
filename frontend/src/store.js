@@ -1,3 +1,4 @@
+// Updated: 2026-08-13 - State management update
 import { create } from 'zustand';
 import { api } from './api';
 

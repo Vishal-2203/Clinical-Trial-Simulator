@@ -1,3 +1,4 @@
+// Updated: 2026-08-13 - Optimization and maintenance update
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';

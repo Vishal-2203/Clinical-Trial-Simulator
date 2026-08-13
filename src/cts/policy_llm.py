@@ -1,3 +1,4 @@
+"""LLM-based Policy Interface - Updated 2026-08-13"""
 from __future__ import annotations
 
 import ast

@@ -10,6 +10,7 @@ Training data: data/training/chembl_dti_training.parquet
 Model saved to: artifacts/dti/dti_model.pt
 """
 
+"""DTI Model Training - Updated 2026-08-13"""
 from __future__ import annotations
 
 import os

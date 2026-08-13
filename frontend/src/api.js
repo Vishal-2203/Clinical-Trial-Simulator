@@ -1,3 +1,4 @@
+// Updated: 2026-08-13 - API client optimization
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 async function request(path, options = {}) {

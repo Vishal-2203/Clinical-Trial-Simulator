@@ -1,3 +1,4 @@
+// Updated: 2026-08-13 - UI improvements
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {

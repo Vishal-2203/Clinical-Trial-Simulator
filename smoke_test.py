@@ -1,3 +1,4 @@
+"""Smoke Test Suite - Updated 2026-08-13"""
 import requests
 import json
 

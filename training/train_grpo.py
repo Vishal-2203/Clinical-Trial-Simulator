@@ -1,3 +1,4 @@
+"""GRPO Training with TRL and 4-bit Quantization - Updated 2026-08-13"""
 from __future__ import annotations
 
 import argparse
@@ -600,11 +601,69 @@ def train_with_trl_unsloth(
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if getattr(tokenizer, "pad_token", None) is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-        device_map="auto" if torch.cuda.is_available() else None,
-    )
+    
+    # Smart model loading: use quantization if GPU available, otherwise CPU-safe loading
+    print(f"[model] Loading {model_name}...")
+    print(f"[model] CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"[model] GPU: {torch.cuda.get_device_name(0)}, Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB")
+    
+    # Determine loading strategy
+    use_quantization = False
+    device_placement = "cpu"
+    
+    if torch.cuda.is_available():
+        try:
+            # Check if GPU has at least 8GB (minimum for 4-bit quantized 14B model)
+            available_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+            if available_memory >= 8:
+                use_quantization = True
+                device_placement = "auto"
+                print("[model] GPU has sufficient memory, using 4-bit quantization...")
+            else:
+                print(f"[model] GPU has {available_memory:.1f}GB (need 8GB+), loading on CPU without quantization...")
+                device_placement = "cpu"
+        except Exception as e:
+            print(f"[model] Error checking GPU memory: {e}, falling back to CPU...")
+            device_placement = "cpu"
+    else:
+        print("[model] No GPU detected, loading on CPU (this will be slow, ~5-10 minutes)...")
+        device_placement = "cpu"
+    
+    try:
+        if use_quantization:
+            from transformers import BitsAndBytesConfig
+            
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                llm_int8_enable_fp32_cpu_offload=False,  # Let BitsAndBytes handle placement
+            )
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=bnb_config,
+                device_map=None,  # Let BitsAndBytes handle device placement automatically
+                torch_dtype=torch.bfloat16,
+            )
+            print("[model] ✓ Loaded with 4-bit quantization (2.5GB)")
+        else:
+            # CPU loading: use lower precision to save memory
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16,  # Use float16 to reduce size (9GB → 4.5GB)
+                device_map="cpu",
+                low_cpu_mem_usage=True,  # Important for CPU loading
+            )
+            print("[model] ✓ Loaded on CPU with float16 (will be slow)")
+    except Exception as e:
+        print(f"[model] Error: {e}")
+        raise RuntimeError(
+            f"Failed to load model {model_name}. "
+            "Try the lightweight trainer: python training/train_grpo.py --config training/configs/grpo_fast.yaml"
+        ) from e
+    
     lora_config = LoraConfig(
         r=lora_rank,
         lora_alpha=lora_alpha,

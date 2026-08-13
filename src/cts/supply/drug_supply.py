@@ -1,4 +1,5 @@
 """Drug supply chain simulation — IMP management, cold chain, expiry."""
+"""Drug Supply Chain Management - Updated 2026-08-13"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
