@@ -1,4 +1,4 @@
-model_name: Qwen/Qwen2.5-0.5B-Instruct
+model_name: Qwen/Qwen2.5-Coder-14B-Instruct
 learning_rate: 2.0e-5
 batch_size: 4
 gradient_accumulation_steps: 2

@@ -15,18 +15,22 @@ export default function PolicyBenchmarks() {
   const [diseaseData, setDiseaseData] = useState([]);
   const [phaseData, setPhaseData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const timerRef = useRef(null);
 
-  const fetchBenchmarks = async () => {
+  const fetchBenchmarks = async ({ forceRun = false } = {}) => {
     const sid = sessionId || 'default';
     try {
+      setLoading(true);
       // Benchmark totals
-      const bRes = await fetch(`${API_BASE}/simulation/benchmarks/${sid}`);
+      const bRes = forceRun
+        ? await fetch(`${API_BASE}/simulation/benchmarks/run?episodes=12`, { method: 'POST' })
+        : await fetch(`${API_BASE}/simulation/benchmarks/${sid}`);
       if (bRes.ok) {
         const b = await bRes.json();
         setBenchmarks(b);
-        setLastUpdated(new Date());
+        setLastUpdated(b.generated_at ? new Date(b.generated_at) : new Date());
       }
 
       // Disease efficiency (trained)
@@ -35,7 +39,7 @@ export default function PolicyBenchmarks() {
         const d = await dRes.json();
         const entries = Object.entries(d.disease_metrics || {}).map(([k, v]) => ({
           disease: k.replace('_', ' '),
-          mean_reward: +(v.mean_reward ?? 0).toFixed(2),
+          mean_reward: +(v.total_reward ?? v.mean_reward ?? 0).toFixed(2),
           success_rate: +(v.success_rate ?? 0).toFixed(2),
         }));
         setDiseaseData(entries);
@@ -50,8 +54,8 @@ export default function PolicyBenchmarks() {
         const phases = Object.keys({ ...hData.phase_metrics, ...tData.phase_metrics });
         const merged = phases.map(p => ({
           phase: p,
-          heuristic: +((hData.phase_metrics[p]?.mean_reward ?? 0)).toFixed(2),
-          trained: +((tData.phase_metrics[p]?.mean_reward ?? 0)).toFixed(2),
+          heuristic: +((hData.phase_metrics[p]?.composite_efficiency ?? hData.phase_metrics[p]?.mean_reward ?? 0)).toFixed(2),
+          trained: +((tData.phase_metrics[p]?.composite_efficiency ?? tData.phase_metrics[p]?.mean_reward ?? 0)).toFixed(2),
         }));
         setPhaseData(merged);
       }
@@ -59,6 +63,12 @@ export default function PolicyBenchmarks() {
       console.error('Benchmarks fetch failed', e);
     }
     setLoading(false);
+    setRefreshing(false);
+  };
+
+  const runFreshBenchmark = () => {
+    setRefreshing(true);
+    fetchBenchmarks({ forceRun: true });
   };
 
   useEffect(() => {
@@ -90,15 +100,17 @@ export default function PolicyBenchmarks() {
           </div>
         </div>
         <motion.button
-          onClick={fetchBenchmarks}
+          onClick={runFreshBenchmark}
+          disabled={refreshing}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
           style={{
             padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(59,130,246,0.3)',
             background: 'rgba(59,130,246,0.1)', color: '#3b82f6',
-            display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: 6, cursor: refreshing ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700,
+            opacity: refreshing ? 0.65 : 1,
           }}
         >
-          <RefreshCw size={12} /> Refresh
+          <RefreshCw size={12} className={refreshing ? 'spin-icon' : ''} /> {refreshing ? 'Running...' : 'Run Fresh Benchmark'}
         </motion.button>
       </div>
 

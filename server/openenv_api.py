@@ -64,10 +64,10 @@ def _session_env(session_id: str):
 
 
 
-def _benchmark_report() -> dict:
-    report = load_latest_benchmark_report()
+def _benchmark_report(force: bool = False, episodes: int = 10, trained_checkpoint: str = "artifacts/policy/latest.json") -> dict:
+    report = None if force else load_latest_benchmark_report()
     if report is None:
-        run_benchmark(episodes=10, trained_checkpoint="artifacts/policy/latest.json", output_dir="artifacts/benchmark")
+        run_benchmark(episodes=episodes, trained_checkpoint=trained_checkpoint, output_dir="artifacts/benchmark")
         report = load_latest_benchmark_report() or {}
     return report
 
@@ -371,10 +371,38 @@ def get_benchmarks(session_id: str):
             report = {}
     except Exception:
         report = {}
-    heuristic = report.get("heuristic", {}).get("total_reward", 0.0)
-    trained = report.get("trained", {}).get("total_reward", 0.0)
-    random = report.get("random", {}).get("total_reward", 0.0)
-    return {"heuristic_reward": heuristic, "trained_reward": trained, "random_reward": random}
+    rows = {row.get("policy"): row for row in report.get("policy_rows", [])}
+    heuristic = rows.get("heuristic", {}).get("total_reward", 0.0)
+    trained = rows.get("trained", {}).get("total_reward", 0.0)
+    random_reward = rows.get("random", {}).get("total_reward", 0.0)
+    return {
+        "generated_at": report.get("generated_at"),
+        "episodes": report.get("overall", {}).get("episodes", 0),
+        "heuristic_reward": heuristic,
+        "trained_reward": trained,
+        "random_reward": random_reward,
+        "policy_rows": report.get("policy_rows", []),
+    }
+
+
+@app.post("/simulation/benchmarks/run")
+def run_policy_benchmarks(
+    episodes: int = Query(default=12, ge=3, le=120),
+    trained_checkpoint: str = Query(default="artifacts/policy/latest.json"),
+) -> dict:
+    """Force a fresh random/heuristic/trained benchmark run and return the new summary."""
+    report = _benchmark_report(force=True, episodes=episodes, trained_checkpoint=trained_checkpoint)
+    rows = {row.get("policy"): row for row in report.get("policy_rows", [])}
+    return {
+        "generated_at": report.get("generated_at"),
+        "episodes": report.get("overall", {}).get("episodes", episodes),
+        "heuristic_reward": rows.get("heuristic", {}).get("total_reward", 0.0),
+        "trained_reward": rows.get("trained", {}).get("total_reward", 0.0),
+        "random_reward": rows.get("random", {}).get("total_reward", 0.0),
+        "policy_rows": report.get("policy_rows", []),
+        "disease_metrics": report.get("disease_metrics", {}),
+        "phase_metrics": report.get("phase_metrics", {}),
+    }
 
 # New endpoint: agent analysis data for graphs
 @app.get("/simulation/agent_analysis/{session_id}")

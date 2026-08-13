@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-10T17:17:58.884336+00:00",
+  "generated_at": "2026-08-13T07:41:19.350139+00:00",
   "overall": {
-    "episodes": 2,
+    "episodes": 50,
     "policies": [
       "random",
       "heuristic",
@@ -12,178 +12,178 @@
     {
       "policy": "random",
       "source": "builtin",
-      "total_reward": 6.419359588530596,
-      "composite_efficiency": 0.35591936554967896,
-      "efficacy": 0.17463139961825533,
-      "safety": -0.75,
-      "compliance": 0.375,
-      "cost": -0.28437500000000004,
-      "progress": 0.03366666666666667,
-      "correction_triggers": 12.0,
+      "total_reward": 6.958142958039395,
+      "composite_efficiency": 0.37457414735988176,
+      "efficacy": 0.18685527770828336,
+      "safety": -0.7916666666666666,
+      "compliance": 0.3854166666666667,
+      "cost": -0.33418322568275594,
+      "progress": 0.044346405228758164,
+      "correction_triggers": 15.916666666666666,
       "stage_transitions": 0.0
     },
     {
       "policy": "heuristic",
       "source": "builtin",
-      "total_reward": 6.757195119688891,
-      "composite_efficiency": 0.4199013335297637,
-      "efficacy": 0.23672271666272982,
+      "total_reward": 6.978563368998927,
+      "composite_efficiency": 0.42228836500545164,
+      "efficacy": 0.2472133345452575,
       "safety": -1.0,
       "compliance": 0.5,
-      "cost": -0.25925854349415206,
-      "progress": 0.135,
-      "correction_triggers": 17.0,
-      "stage_transitions": 0.0
+      "cost": -0.25644313138264446,
+      "progress": 0.13227380952380952,
+      "correction_triggers": 17.354166666666668,
+      "stage_transitions": 0.020833333333333332
     },
     {
       "policy": "trained",
-      "source": "checkpoint:linear_softmax:C:\\Users\\adity\\AppData\\Local\\Temp\\pytest-of-adity\\pytest-7\\test_benchmark_uses_checkpoint0\\policy.json",
-      "total_reward": 6.661190680493132,
-      "composite_efficiency": 0.4314827949461656,
-      "efficacy": 0.2200739290014596,
-      "safety": -0.999169921875,
+      "source": "checkpoint:linear_softmax:artifacts\\policy\\latest.json",
+      "total_reward": 6.7187015060811985,
+      "composite_efficiency": 0.4342050665951053,
+      "efficacy": 0.2220042334986051,
+      "safety": -0.9995671948356808,
       "compliance": 0.5,
-      "cost": -0.23901596920789842,
-      "progress": 0.128,
-      "correction_triggers": 15.0,
+      "cost": -0.24086387235978235,
+      "progress": 0.1461666666666666,
+      "correction_triggers": 15.166666666666666,
       "stage_transitions": 0.0
     }
   ],
   "disease_metrics": {
     "random": {
       "type2_diabetes": {
-        "total_reward": 8.480999857558572,
-        "composite_efficiency": 0.36236410808174296,
-        "efficacy": 0.28462123035211523,
-        "safety": -1.0,
-        "compliance": 0.3,
-        "cost": -0.337,
-        "progress": 0.062222222222222234,
-        "correction_triggers": 17.0,
+        "total_reward": 8.41769771928055,
+        "composite_efficiency": 0.37606835010103423,
+        "efficacy": 0.23467262633152608,
+        "safety": -0.8333333333333334,
+        "compliance": 0.36666666666666664,
+        "cost": -0.3613245895580454,
+        "progress": 0.05196296296296297,
+        "correction_triggers": 15.833333333333334,
         "stage_transitions": 0.0
       },
       "hypertension": {
-        "total_reward": 7.592738095238095,
-        "composite_efficiency": 0.30317460317460315,
-        "efficacy": 0.0,
-        "safety": 0.0,
-        "compliance": 0.4,
-        "cost": -0.2,
-        "progress": 0.022222222222222223,
-        "correction_triggers": 9.0,
+        "total_reward": 7.9593107452969525,
+        "composite_efficiency": 0.361170171910451,
+        "efficacy": 0.15194552831442767,
+        "safety": -0.6666666666666666,
+        "compliance": 0.36666666666666664,
+        "cost": -0.3060037028334726,
+        "progress": 0.05162962962962963,
+        "correction_triggers": 24.333333333333332,
         "stage_transitions": 0.0
       },
       "nsclc": {
-        "total_reward": 1.1225334495316142,
-        "composite_efficiency": 0.40659018348229153,
-        "efficacy": 0.13888128437604044,
-        "safety": -1.0,
-        "compliance": 0.5,
-        "cost": -0.2175,
-        "progress": 0.016,
-        "correction_triggers": 4.0,
+        "total_reward": 2.6814360255520775,
+        "composite_efficiency": 0.3873695752283681,
+        "efficacy": 0.12375485067265087,
+        "safety": -0.8333333333333334,
+        "compliance": 0.4583333333333333,
+        "cost": -0.25718749999999996,
+        "progress": 0.028925925925925928,
+        "correction_triggers": 6.25,
         "stage_transitions": 0.0
       },
       "dengue": {
-        "total_reward": 8.481166951794101,
-        "composite_efficiency": 0.3515485674600781,
-        "efficacy": 0.2750230837448656,
-        "safety": -1.0,
-        "compliance": 0.3,
-        "cost": -0.383,
-        "progress": 0.03422222222222222,
-        "correction_triggers": 18.0,
+        "total_reward": 8.774127342027986,
+        "composite_efficiency": 0.37368849219967354,
+        "efficacy": 0.23704810551452882,
+        "safety": -0.8333333333333334,
+        "compliance": 0.3499999999999999,
+        "cost": -0.41221711033950625,
+        "progress": 0.04486710239651417,
+        "correction_triggers": 17.25,
         "stage_transitions": 0.0
       }
     },
     "heuristic": {
       "type2_diabetes": {
-        "total_reward": 9.350065585821323,
-        "composite_efficiency": 0.45508945488391866,
-        "efficacy": 0.29867336819363305,
+        "total_reward": 9.392646209867342,
+        "composite_efficiency": 0.4615861109924509,
+        "efficacy": 0.29426010843577893,
         "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.2525,
-        "progress": 0.21200000000000002,
+        "cost": -0.25472029496484055,
+        "progress": 0.26299999999999996,
         "correction_triggers": 16.0,
         "stage_transitions": 0.0
       },
       "hypertension": {
-        "total_reward": 7.130890662126434,
-        "composite_efficiency": 0.35530370302686237,
-        "efficacy": 0.20287231166986364,
+        "total_reward": 7.154752714945346,
+        "composite_efficiency": 0.35895441973495146,
+        "efficacy": 0.22288539608088034,
         "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.31703125,
-        "progress": 0.052000000000000005,
+        "cost": -0.29805933129370626,
+        "progress": 0.022333333333333334,
         "correction_triggers": 32.0,
         "stage_transitions": 0.0
       },
       "nsclc": {
-        "total_reward": 1.1280021630055395,
-        "composite_efficiency": 0.4092480483922838,
-        "efficacy": 0.14051411652376386,
+        "total_reward": 1.1271757393540418,
+        "composite_efficiency": 0.408737617536797,
+        "efficacy": 0.14343762831313503,
         "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.21555555555555556,
-        "progress": 0.032,
+        "cost": -0.2165486111111111,
+        "progress": 0.026000000000000006,
         "correction_triggers": 4.0,
         "stage_transitions": 0.0
       },
       "dengue": {
-        "total_reward": 9.419822067802269,
-        "composite_efficiency": 0.45996412781599005,
-        "efficacy": 0.3048310702636586,
+        "total_reward": 10.239678811828975,
+        "composite_efficiency": 0.4598753117576065,
+        "efficacy": 0.3282702053512361,
         "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.25194736842105264,
-        "progress": 0.244,
-        "correction_triggers": 16.0,
-        "stage_transitions": 0.0
+        "cost": -0.2564442881609195,
+        "progress": 0.21776190476190474,
+        "correction_triggers": 17.416666666666668,
+        "stage_transitions": 0.08333333333333333
       }
     },
     "trained": {
       "type2_diabetes": {
-        "total_reward": 9.434689447067063,
-        "composite_efficiency": 0.453175830683752,
-        "efficacy": 0.2932936237924666,
-        "safety": -0.9966796874999999,
+        "total_reward": 9.38002358142938,
+        "composite_efficiency": 0.455853708365342,
+        "efficacy": 0.29333294162994994,
+        "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.2478515625,
-        "progress": 0.2,
+        "cost": -0.25311959813270724,
+        "progress": 0.22299999999999995,
         "correction_triggers": 16.0,
         "stage_transitions": 0.0
       },
       "hypertension": {
-        "total_reward": 6.83801740915841,
-        "composite_efficiency": 0.42393632727635616,
-        "efficacy": 0.1468373098024177,
+        "total_reward": 6.915006233610011,
+        "composite_efficiency": 0.42183343675735346,
+        "efficacy": 0.1448961863264563,
         "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.24556603773584906,
-        "progress": 0.17600000000000002,
-        "correction_triggers": 24.0,
+        "cost": -0.24377640553034827,
+        "progress": 0.162,
+        "correction_triggers": 24.333333333333332,
         "stage_transitions": 0.0
       },
       "nsclc": {
-        "total_reward": 1.1231181604147817,
-        "composite_efficiency": 0.4069704226182783,
-        "efficacy": 0.14335545832794774,
+        "total_reward": 1.2182590935361188,
+        "composite_efficiency": 0.4077936362628975,
+        "efficacy": 0.145289828840283,
         "safety": -1.0,
         "compliance": 0.5,
-        "cost": -0.213125,
-        "progress": 0.012,
-        "correction_triggers": 4.0,
+        "cost": -0.21546874999999996,
+        "progress": 0.017000000000000005,
+        "correction_triggers": 4.333333333333333,
         "stage_transitions": 0.0
       },
       "dengue": {
-        "total_reward": 9.248937705332274,
-        "composite_efficiency": 0.441848599206276,
-        "efficacy": 0.2968093240830064,
-        "safety": -1.0,
+        "total_reward": 9.361517115749278,
+        "composite_efficiency": 0.4513394849948282,
+        "efficacy": 0.30449797719773103,
+        "safety": -0.9982687793427231,
         "compliance": 0.5,
-        "cost": -0.24952127659574466,
-        "progress": 0.124,
+        "cost": -0.2510907357760738,
+        "progress": 0.18266666666666664,
         "correction_triggers": 16.0,
         "stage_transitions": 0.0
       }
@@ -192,27 +192,31 @@
   "phase_metrics": {
     "random": {
       "stage1": {
-        "composite_efficiency": 0.3685610103554708,
-        "support": 25.0
+        "composite_efficiency": 0.3778590532754135,
+        "support": 327.0
       }
     },
     "heuristic": {
       "stage1": {
-        "composite_efficiency": 0.4132612748303955,
-        "support": 25.0
+        "composite_efficiency": 0.41576664713660433,
+        "support": 311.0
+      },
+      "stage2": {
+        "composite_efficiency": 0.4888058064534464,
+        "support": 1.0
       }
     },
     "trained": {
       "stage1": {
-        "composite_efficiency": 0.4232201821135629,
-        "support": 23.0
+        "composite_efficiency": 0.4248056404494687,
+        "support": 278.0
       }
     }
   },
   "correction_summary": {
-    "random": 12.0,
-    "heuristic": 17.0,
-    "trained": 15.0
+    "random": 15.916666666666666,
+    "heuristic": 17.354166666666668,
+    "trained": 15.166666666666666
   },
   "stage_config": {
     "stage1": {

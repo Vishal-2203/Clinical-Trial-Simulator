@@ -560,7 +560,7 @@ def train_with_trl_unsloth(
             metadata_overrides=metadata_overrides,
         )
 
-    model_name = str(cfg_dict.get("model_name", "Qwen/Qwen2.5-1.5B-Instruct"))
+    model_name = str(cfg_dict.get("model_name", "Qwen/Qwen2.5-Coder-14B-Instruct"))
     resume_adapter_dir = ""
     if resume_from_checkpoint and Path(resume_from_checkpoint).exists():
         try:

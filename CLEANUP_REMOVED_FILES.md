@@ -9957,3 +9957,273 @@ Total reclaimed this pass (approx): 337.49 MB
 - Path: E:\Projects\Clinical Trial Simulator\.venv\Lib\site-packages\plotly\validators\parcoords\unselected\__pycache__
   - Size before removal: 0 MB
   - Recover with: Recreated automatically by Python when modules are imported/executed.
+
+---
+
+## Third Pass Cleanup (2026-07-13 18:20 +05:30)
+
+> **Environment snapshot saved to:** `requirements_snapshot_2026-07-13.txt` (pip freeze of `.venv` before deletion)
+
+Total reclaimed this pass (approx): **41,553 MB (~40.6 GB)**
+
+### System Version Info (at time of removal)
+
+| Tool | Version |
+|------|---------|
+| Python | 3.11.9 |
+| pip | 26.0.1 |
+| Node.js | v24.13.0 |
+| npm | 11.6.2 |
+| CUDA (torch build) | cu128 (CUDA 12.8) |
+
+---
+
+### Removed Items
+
+---
+
+#### 1. `chembl_37/chembl_37_sqlite/chembl_37.db` (entire `chembl_37/` folder)
+
+- **Size before removal:** 29,068 MB (28.4 GB)
+- **What it is:** The full ChEMBL 37 SQLite relational database. Used by `scripts/apply_chembl_params.py`, `scripts/query_chembl.py`, `scripts/query_chembl_dengue.py`, and `scripts/build_dti_dataset.py` to pull compound data, bioactivity records, and pharmacokinetic parameters. It was the source for `data/training/chembl_dti_training.parquet` and `data/training/drug_fingerprints.npz`.
+- **Source:** https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_37/
+- **Restore steps:**
+  ```powershell
+  # Step 1 — Download archive (~5.5 GB)
+  Invoke-WebRequest -Uri "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_37/chembl_37_sqlite.tar.gz" -OutFile "chembl_37_sqlite.tar.gz"
+  # Step 2 — Extract (built-in tar on Windows 10/11+)
+  tar -xzf chembl_37_sqlite.tar.gz
+  # Result: chembl_37/chembl_37_sqlite/chembl_37.db (~29 GB)
+  ```
+
+---
+
+#### 2. `chembl_37_sqlite.tar.gz`
+
+- **Size before removal:** 5,497 MB (5.4 GB)
+- **What it is:** The compressed download archive for ChEMBL 37. Redundant once extracted — the `.db` above is the extracted form.
+- **Source:** https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_37/chembl_37_sqlite.tar.gz
+- **Restore steps:** Same download command as item 1. Do not re-extract if `.db` already exists.
+
+---
+
+#### 3. `.venv` (Python Virtual Environment)
+
+- **Size before removal:** 5,062 MB (4.9 GB)
+- **What it is:** The primary Python 3.11 virtual environment with all project dependencies — PyTorch (CUDA 12.8), Transformers, TRL, PEFT, Streamlit, FastAPI, RDKit, Wandb, etc.
+- **Exact package versions installed at time of deletion (key packages):**
+  ```
+  accelerate==1.7.0           aiohttp==3.13.5
+  altair==6.1.0               datasets==3.6.0
+  fair-esm==2.0.0             fastapi==0.136.1
+  huggingface_hub==0.36.2     matplotlib==3.10.9
+  numpy==2.4.3                pandas==2.3.3
+  peft==0.17.1                plotly==5.24.1
+  pydantic==2.13.3            pytest==9.0.3
+  rdkit==2026.3.3             scikit-learn==1.9.0
+  scipy==1.17.1               streamlit==1.56.0
+  sympy==1.14.0               tokenizers==0.21.4
+  torch==2.11.0+cu128         torchaudio==2.11.0+cu128
+  torchvision==0.26.0+cu128   trl==0.18.2
+  transformers==4.52.4        uvicorn==0.46.0
+  wandb==0.20.1
+  (Full list in requirements_snapshot_2026-07-13.txt)
+  ```
+- **Restore steps:**
+  ```powershell
+  # Step 1 — Create venv (Python 3.11 required per pyproject.toml: >=3.11,<3.13)
+  python -m venv .venv
+
+  # Step 2 — Activate
+  .\.venv\Scripts\Activate.ps1
+
+  # Step 3 — Install project + all extras
+  pip install -e ".[train]"
+
+  # Step 3b (GPU) — Install PyTorch with CUDA 12.8 specifically
+  pip install torch==2.11.0+cu128 torchaudio==2.11.0+cu128 torchvision==0.26.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+
+  # Step 3c (optional) — Restore exact pinned versions
+  pip install -r requirements_snapshot_2026-07-13.txt
+  ```
+- **Notes:**
+  - `pyproject.toml` specifies `requires-python = ">=3.11,<3.13"`
+  - The project is installed as an editable package: `-e git+https://github.com/TheSun-1712/Clinical-Trial-Simulator.git`
+  - On Linux, `unsloth` is also included in `[train]` extras
+
+---
+
+#### 4. `.venv-py314-backup` (Backup Virtual Environment)
+
+- **Size before removal:** 1,426 MB (1.4 GB)
+- **What it is:** A backup Python venv created for Python 3.14 compatibility testing. Was logged in the original cleanup pass (2026-05-11) but was not actually deleted at that time.
+- **Restore steps:**
+  ```powershell
+  python3.14 -m venv .venv-py314-backup
+  .\.venv-py314-backup\Scripts\Activate.ps1
+  pip install -e ".[train]"
+  ```
+
+---
+
+#### 5. `data/training/chembl_dti_training.parquet`
+
+- **Size before removal:** 207 MB
+- **What it is:** Processed Drug-Target Interaction (DTI) training dataset in Apache Parquet format. Generated from ChEMBL 37 SQLite by `scripts/build_dti_dataset.py`. Contains compound SMILES strings, target UniProt IDs, bioactivity values (Ki, IC50, EC50), and Morgan fingerprints.
+- **Restore steps:**
+  ```powershell
+  # Requires: ChEMBL 37 database restored (item 1 above) and .venv activated
+  .\.venv\Scripts\Activate.ps1
+  python scripts/build_dti_dataset.py
+  # Output: data/training/chembl_dti_training.parquet
+  ```
+
+---
+
+#### 6. `data/training/drug_fingerprints.npz`
+
+- **Size before removal:** 50.34 MB
+- **What it is:** NumPy compressed archive of Morgan fingerprints (radius=2, 2048 bits) for all compounds in the DTI training set. Generated alongside the parquet file by the same script.
+- **Restore steps:**
+  ```powershell
+  .\.venv\Scripts\Activate.ps1
+  python scripts/build_dti_dataset.py
+  # Output: data/training/drug_fingerprints.npz  (generated alongside the parquet)
+  ```
+
+---
+
+#### 7. `frontend/node_modules`
+
+- **Size before removal:** 215.32 MB
+- **What it is:** npm package dependencies for the React + Vite frontend.
+- **Key dependency versions (from `frontend/package.json`):**
+  ```json
+  "react": "^19.2.5"
+  "@tanstack/react-query": "^5.100.4"
+  "framer-motion": "^12.38.0"
+  "recharts": "^3.8.1"
+  "three": "^0.185.1"
+  "zustand": "^5.0.12"
+  "axios": "^1.15.2"
+  "lucide-react": "^1.11.0"
+  "date-fns": "^4.1.0"
+  "fflate": "^0.8.3"
+  "vite": "^8.0.10"        (devDependency)
+  "typescript": "~6.0.2"   (devDependency)
+  "@vitejs/plugin-react-swc": "^4.3.0"
+  ```
+- **Restore steps:**
+  ```powershell
+  cd frontend
+  npm install
+  # Uses frontend/package-lock.json for exact pinned versions
+  # Node.js v24.13.0 / npm 11.6.2 were active at time of deletion
+  cd ..
+  ```
+
+---
+
+#### 8. `frontend/dist`
+
+- **Size before removal:** 3.03 MB
+- **What it is:** Vite production build output — bundled HTML, JavaScript, and CSS static files for production serving.
+- **Restore steps:**
+  ```powershell
+  cd frontend
+  npm install    # if node_modules not yet restored
+  npm run build
+  # Output: frontend/dist/
+  cd ..
+  ```
+
+---
+
+#### 9. `artifacts/replay_buffer.db`
+
+- **Size before removal:** 8.68 MB
+- **What it is:** SQLite replay buffer database for the RL training loop. Stores past trial simulation trajectories and reward signals for experience replay during GRPO policy training.
+- **Restore steps:**
+  ```powershell
+  # Auto-regenerated on next training run
+  .\.venv\Scripts\Activate.ps1
+  python training/train_grpo.py --config training/configs/grpo_gpu_8gb.yaml
+  ```
+
+---
+
+#### 10. `artifacts/dti/dti_model.pt`
+
+- **Size before removal:** 16.47 MB
+- **What it is:** Trained PyTorch checkpoint for the Drug-Target Interaction (DTI) neural network. Trained on `data/training/chembl_dti_training.parquet` to predict binding affinity from SMILES strings + target protein sequences. Model architecture and training stats in `artifacts/dti/training_stats.json` (kept).
+- **Restore steps:**
+  ```powershell
+  # Step 1 — Ensure training data exists (rebuild if needed)
+  .\.venv\Scripts\Activate.ps1
+  python scripts/build_dti_dataset.py
+
+  # Step 2 — Retrain the DTI model
+  python scripts/continuous_neural_training.py
+  # Output: artifacts/dti/dti_model.pt
+  ```
+
+---
+
+#### 11. `.pytest_basetemp`, `.pytest_cache`, `.pytest_tmp`
+
+- **Size before removal:** ~0 MB (empty / negligible)
+- **What they are:** Temporary directories created by pytest during test runs. Contain cached test results, temp fixtures, and intermediate outputs.
+- **Restore steps:**
+  ```powershell
+  # Auto-recreated on next test run — no manual action needed
+  .\.venv\Scripts\Activate.ps1
+  pytest
+  ```
+
+---
+
+### Intentionally NOT Removed This Pass
+
+| Path | Reason kept |
+|------|-------------|
+| `data/snapshots/disease_priors.json` | Required by runtime defaults in `src/cts/data/priors.py` |
+| `data/snapshots/disease_priors_v2.json` | Active runtime data used by simulation |
+| `artifacts/policy/` | Small (0.65 MB), contains active policy JSON needed at runtime |
+| `artifacts/plots/` | Small (0.19 MB) |
+| `artifacts/benchmark/`, `artifacts/benchmark_test/` | Small (<0.5 MB combined) |
+| `artifacts/dti/training_stats.json` | Tiny; records training metadata |
+| `lib61hgvnnk0-muschelman/muschelman.fbx` | 3D model asset (1.52 MB) — unclear if actively used, kept to avoid data loss |
+| `requirements_snapshot_2026-07-13.txt` | **Created this session** as an exact pip freeze for restoration reference |
+
+---
+
+### Quick Full Environment Restore (Copy-Paste Sequence)
+
+```powershell
+# ── 1. Python environment ──────────────────────────────────────────────────
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[train]"
+pip install torch==2.11.0+cu128 torchaudio==2.11.0+cu128 torchvision==0.26.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+
+# ── 2. Frontend packages ───────────────────────────────────────────────────
+cd frontend; npm install; cd ..
+
+# ── 3. ChEMBL 37 database (~35 GB total, ~5.5 GB download) ─────────────────
+Invoke-WebRequest -Uri "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_37/chembl_37_sqlite.tar.gz" -OutFile "chembl_37_sqlite.tar.gz"
+tar -xzf chembl_37_sqlite.tar.gz
+Remove-Item chembl_37_sqlite.tar.gz   # optionally delete archive after extraction
+
+# ── 4. Rebuild training datasets (requires ChEMBL DB) ──────────────────────
+python scripts/build_dti_dataset.py
+
+# ── 5. Retrain DTI model (requires training data) ──────────────────────────
+python scripts/continuous_neural_training.py
+
+# ── 6. Start services ──────────────────────────────────────────────────────
+# Backend:
+python -m uvicorn server.main:app --reload --port 8000
+# Frontend (new terminal):
+cd frontend; npm run dev
+```
+

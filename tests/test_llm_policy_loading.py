@@ -26,7 +26,7 @@ def test_checkpoint_loader_reads_llm_manifest(monkeypatch, tmp_path: Path) -> No
     save_llm_policy_checkpoint(
         str(checkpoint),
         model_dir=str(tmp_path / "model"),
-        model_name="Qwen/Qwen2.5-1.5B-Instruct",
+        model_name="Qwen/Qwen2.5-Coder-14B-Instruct",
         adapter_dir=str(tmp_path / "adapter"),
         metadata={"max_new_tokens": 48},
     )
@@ -40,7 +40,7 @@ def test_checkpoint_loader_reads_llm_manifest(monkeypatch, tmp_path: Path) -> No
 
     monkeypatch.setattr("cts.policy_llm.LLMPolicy", FakeLLMPolicy)
     loaded = load_any_policy_checkpoint(str(checkpoint))
-    assert loaded.model_name == "Qwen/Qwen2.5-1.5B-Instruct"
+    assert loaded.model_name == "Qwen/Qwen2.5-Coder-14B-Instruct"
     assert loaded.adapter_dir == str(tmp_path / "adapter")
 
     description = describe_policy_checkpoint(str(checkpoint))
@@ -53,7 +53,7 @@ def test_benchmark_accepts_llm_checkpoint_source(monkeypatch, tmp_path: Path) ->
     save_llm_policy_checkpoint(
         str(checkpoint),
         model_dir=str(tmp_path / "model"),
-        model_name="Qwen/Qwen2.5-1.5B-Instruct",
+        model_name="Qwen/Qwen2.5-Coder-14B-Instruct",
     )
 
     class FakePolicy:

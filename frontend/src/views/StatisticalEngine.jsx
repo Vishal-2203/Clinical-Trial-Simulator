@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell } from 'recharts';
 import { useTrialStore } from '../store';
-import { BarChart2, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API = 'http://localhost:8000';
@@ -23,21 +23,80 @@ function PowerGauge({ power }) {
 }
 
 export default function StatisticalEngine() {
-  const { sessionId } = useTrialStore();
+  const { sessionId, observation, history, stepNumber } = useTrialStore();
   const [data, setData] = useState(null);
 
+  const buildLocalData = useCallback(() => {
+    const rows = history || [];
+    const current = observation || rows[rows.length - 1] || {};
+    const enrolled = Number(current.enrolled ?? current.active ?? 0) || 0;
+    const active = Number(current.active ?? enrolled) || 0;
+    const control = Number(current.control_arm_size ?? Math.max(1, Math.round(enrolled * 0.48))) || 1;
+    const efficacy = Number(current.efficacy_signal_estimate ?? current.efficacy_signal ?? 0.35) || 0;
+    const toxicity = Number(current.cumulative_toxicity ?? 0.1) || 0;
+    const effectSize = Math.max(0, Math.min(1.5, (efficacy - 0.25) * 1.9 - toxicity * 0.25));
+    const power = Math.max(0, Math.min(1, (active / 80) * 0.58 + effectSize * 0.32));
+    const pValue = Math.max(0.0001, Math.min(1, 1 - power + (0.08 / Math.max(1, Math.sqrt(active + control)))));
+    const margin = Math.max(0.04, 0.24 / Math.max(1, Math.sqrt(active + control)));
+
+    const statHistory = rows.map((row, idx) => {
+      const rowActive = Number(row.active ?? row.enrolled ?? 0) || 0;
+      const rowEff = Number(row.efficacy_signal_estimate ?? row.efficacy_signal ?? 0.25) || 0;
+      const rowPower = Math.max(0, Math.min(1, (rowActive / 80) * 0.58 + Math.max(0, rowEff - 0.25) * 0.55));
+      return {
+        week: row.week ?? row.step ?? idx,
+        power: row.current_power ?? rowPower,
+        p_value: row.current_pvalue ?? Math.max(0.0001, Math.min(1, 1 - rowPower + 0.04)),
+      };
+    });
+
+    const patientStates = current.patient_states || rows[rows.length - 1]?.patient_states || [];
+    const split = (predicate) => {
+      const cohort = patientStates.filter(predicate);
+      const mean = cohort.length
+        ? cohort.reduce((sum, p) => sum + Number(p.efficacy_response ?? p.efficacy ?? 0), 0) / cohort.length
+        : efficacy;
+      return { n: cohort.length || Math.round(active / 2), mean_efficacy: mean };
+    };
+
+    return {
+      power,
+      p_value: pValue,
+      effect_size: effectSize,
+      ci_lower: Math.max(0, efficacy - margin),
+      ci_upper: Math.min(1, efficacy + margin),
+      alpha_spent: Math.min(0.05, (Number(current.week ?? stepNumber ?? 0) + 1) * 0.0015),
+      recommendation: power >= 0.8 ? 'Power target reached. Consider interim success criteria.' : 'Continue enrollment and monitor treatment-control separation.',
+      stat_history: statHistory,
+      subgroup_analysis: {
+        age_over65: split((p) => Number(p.profile?.age ?? p.age ?? 0) >= 65),
+        age_under65: split((p) => Number(p.profile?.age ?? p.age ?? 0) < 65),
+        male: split((p) => String(p.profile?.sex ?? p.sex ?? '').toLowerCase().startsWith('m')),
+        female: split((p) => String(p.profile?.sex ?? p.sex ?? '').toLowerCase().startsWith('f')),
+      },
+      n_treatment: active,
+      n_control: control,
+    };
+  }, [history, observation, stepNumber]);
+
   const fetchData = useCallback(async () => {
-    if (!sessionId || sessionId === 'offline-demo') return;
+    if (!sessionId || sessionId === 'offline-demo') {
+      setData(buildLocalData());
+      return;
+    }
     try {
       const res = await window.fetch(`${API}/simulation/statistics/${sessionId}`);
       const d = await res.json();
-      setData(d);
-    } catch {}
-  }, [sessionId]);
+      if (d?.error) setData(buildLocalData());
+      else setData(d);
+    } catch {
+      setData(buildLocalData());
+    }
+  }, [sessionId, buildLocalData]);
 
-  useEffect(() => { fetchData(); const id = setInterval(fetchData, 5000); return () => clearInterval(id); }, [fetchData]);
+  useEffect(() => { fetchData(); const id = setInterval(fetchData, 5000); return () => clearInterval(id); }, [fetchData, stepNumber]);
 
-  const history = data?.stat_history || [];
+  const statHistory = data?.stat_history || [];
   const subgroups = data?.subgroup_analysis || {};
   const pOk = (data?.p_value ?? 1) < 0.05;
 
@@ -100,11 +159,11 @@ export default function StatisticalEngine() {
         {/* Power curve over time */}
         <div className="liquid-glass" style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ margin: '0 0 12px 0', fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b' }}>Power Curve Over Time</h3>
-          {history.length < 2 ? (
+          {statHistory.length < 2 ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', fontSize: 12 }}>Take steps to build power history</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={history} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+              <LineChart data={statHistory} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="week" stroke="#334155" tick={{ fontSize: 9, fill: '#475569' }} />
                 <YAxis stroke="#334155" tick={{ fontSize: 9, fill: '#475569' }} domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`} />

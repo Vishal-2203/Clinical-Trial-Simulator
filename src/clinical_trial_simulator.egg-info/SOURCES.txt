@@ -29,6 +29,12 @@ src/cts/data/db.py
 src/cts/data/priors.py
 src/cts/data/realworld_apis.py
 src/cts/data/serp_scanner.py
+src/cts/dti/__init__.py
+src/cts/dti/encoders.py
+src/cts/dti/fusion_model.py
+src/cts/dti/patient_pk.py
+src/cts/dti/predictor.py
+src/cts/dti/trainer.py
 src/cts/environment/__init__.py
 src/cts/environment/event_engine.py
 src/cts/environment/models.py

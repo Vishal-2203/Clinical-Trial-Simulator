@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 import { useTrialStore } from '../store';
-import { Beaker, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Beaker, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API = 'http://localhost:8000';
@@ -21,19 +21,58 @@ function RangeBadge({ range }) {
 }
 
 export default function PKPDDashboard() {
-  const { sessionId } = useTrialStore();
+  const { sessionId, observation, history, stepNumber } = useTrialStore();
   const [data, setData] = useState(null);
 
+  const buildLocalData = useCallback(() => {
+    const rows = (history || []).map((row, idx) => {
+      const concentration = row.pk_central_concentration ?? row.drug_concentration ?? 0;
+      return {
+        week: row.week ?? row.step ?? idx,
+        c_central: Number(concentration) || 0,
+        c_peripheral: Number(row.pk_peripheral_concentration ?? concentration * 0.62) || 0,
+      };
+    });
+    const current = observation || rows[rows.length - 1] || {};
+    const central = Number(current.pk_central_concentration ?? current.drug_concentration ?? rows[rows.length - 1]?.c_central ?? 0) || 0;
+    const peripheral = Number(current.pk_peripheral_concentration ?? central * 0.62) || 0;
+    const dose = Number(current.dose_level ?? 1) || 1;
+    const auc = rows.reduce((sum, row) => sum + Number(row.c_central || 0), 0);
+    const cmax = rows.reduce((max, row) => Math.max(max, Number(row.c_central || 0)), central);
+    const therapeuticRange = central > 0.8 ? 'toxic' : central >= 0.15 ? 'therapeutic' : 'sub_therapeutic';
+
+    return {
+      c_central: central,
+      c_peripheral: peripheral,
+      auc,
+      cmax,
+      cmin: rows.reduce((min, row) => Math.min(min, Number(row.c_central || 0)), central),
+      t_half_weeks: current.pk_half_life ?? 1.8,
+      therapeutic_range: current.pk_therapeutic_range ?? therapeuticRange,
+      dose_level: dose,
+      dose_recommendation: central > 0.8 ? Math.max(0.3, dose - 0.15) : central < 0.15 ? Math.min(2, dose + 0.1) : dose,
+      timeseries: rows,
+      mec: 0.15,
+      mtc: 0.80,
+    };
+  }, [history, observation]);
+
   const fetch = useCallback(async () => {
-    if (!sessionId || sessionId === 'offline-demo') return;
+    if (!sessionId || sessionId === 'offline-demo') {
+      setData(buildLocalData());
+      return;
+    }
     try {
       const res = await window.fetch(`${API}/simulation/pkpd/${sessionId}`);
       const d = await res.json();
-      setData(d);
-    } catch {}
-  }, [sessionId]);
+      if (d?.error) setData(buildLocalData());
+      else setData(d);
+    } catch {
+      setData(buildLocalData());
+    }
+  }, [sessionId, buildLocalData]);
 
-  useEffect(() => { fetch(); const id = setInterval(fetch, 5000); return () => clearInterval(id); }, [fetch]);
+  useEffect(() => { fetch(); const id = setInterval(fetch, 5000); return () => clearInterval(id); }, [fetch, stepNumber]);
 
   const ts = data?.timeseries || [];
   const mec = data?.mec ?? 0.15;

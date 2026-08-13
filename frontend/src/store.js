@@ -44,6 +44,58 @@ function buildMockHistory(steps = 6) {
   }));
 }
 
+function buildMockStep(prev, action, stepNumber, totalReward, history, eventLog) {
+  const prevComp = prev?.composition ?? { a: 0.34, b: 0.33, c: 0.33 };
+  const isRecruit = action.action_type === 'recruit';
+  const isDose = action.action_type === 'adjust_dose';
+  const isComp = action.action_type === 'update_composition';
+  const reward = parseFloat((Math.random() * 6 - 1.5).toFixed(3));
+  const newStep = stepNumber + 1;
+  const recruited = isRecruit ? Math.max(1, Math.round(action.magnitude ?? 3)) : 0;
+  const newActive = Math.max(0, Number(prev?.active ?? 0) + recruited);
+  const newDose = parseFloat(Math.max(0.3, Math.min(2.0,
+    Number(prev?.dose_level ?? 1.0) + (isDose ? Number(action.magnitude ?? 0) : (Math.random() - 0.5) * 0.01)
+  )).toFixed(3));
+  const newComp = isComp && action.composition ? action.composition : {
+    a: parseFloat(Math.max(0.1, Math.min(0.8, Number(prevComp.a ?? 0.34) + (Math.random() - 0.5) * 0.03)).toFixed(3)),
+    b: parseFloat(Math.max(0.1, Math.min(0.8, Number(prevComp.b ?? 0.33) + (Math.random() - 0.5) * 0.02)).toFixed(3)),
+    c: parseFloat(Math.max(0.1, Math.min(0.8, Number(prevComp.c ?? 0.33) + (Math.random() - 0.5) * 0.02)).toFixed(3)),
+  };
+  const obs = {
+    ...(prev ?? mockObs(newStep)),
+    step: newStep,
+    week: Number(prev?.week ?? stepNumber) + 1,
+    active: newActive,
+    enrolled: Number(prev?.enrolled ?? 0) + recruited,
+    dose_level: newDose,
+    composition: newComp,
+    drug_concentration: parseFloat(Math.min(2, Number(prev?.drug_concentration ?? 0.5) + (isDose ? Number(action.magnitude ?? 0) * 0.1 : 0) + (Math.random() - 0.48) * 0.04).toFixed(4)),
+    efficacy_signal_estimate: parseFloat(Math.min(1, Number(prev?.efficacy_signal_estimate ?? 0.4) + 0.02 + Math.random() * 0.03).toFixed(4)),
+    cumulative_toxicity: parseFloat(Math.min(1, Number(prev?.cumulative_toxicity ?? 0.1) + 0.01 + Math.random() * 0.015).toFixed(4)),
+    fda_sentiment: parseFloat(Math.min(1, Number(prev?.fda_sentiment ?? 0.6) + (Math.random() - 0.4) * 0.05).toFixed(4)),
+    disease_progression: parseFloat(Math.max(0, Number(prev?.disease_progression ?? 50) - 0.5 - Math.random()).toFixed(2)),
+    fda_flag: reward > 2 ? 'clear' : reward < -1 ? 'warning' : 'monitoring',
+    reward,
+    patient_states: mockPatients(Math.max(4, newActive)),
+  };
+  const phase = newStep < 5 ? 'PHASE I' : newStep < 12 ? 'PHASE II' : 'PHASE III';
+  return {
+    observation: obs,
+    stepNumber: newStep,
+    totalReward: totalReward + reward,
+    trialPhase: phase,
+    history: [...history, obs],
+    eventLog: [...eventLog, {
+      id: Date.now(),
+      time: new Date().toLocaleTimeString(),
+      type: reward >= 0 ? 'positive' : 'negative',
+      message: `[Mock] Action: ${action.action_type ?? JSON.stringify(action)}`,
+      reward,
+    }],
+    actionLoading: false,
+  };
+}
+
 export const useTrialStore = create((set, get) => ({
   // Session
   sessionId: null,
@@ -164,8 +216,11 @@ export const useTrialStore = create((set, get) => ({
     set({ actionLoading: true });
     try {
       const res = await api.step(sessionId, action);
-      const obs = res.observation ?? res;
+      if (res.error) {
+        throw new Error(res.error);
+      }
       const state = res.state ?? {};
+      const obs = { ...(res.observation ?? {}), ...state };
       const reward = res.reward ?? 0;
       const newStep = stepNumber + 1;
       const newTotal = totalReward + reward;
@@ -188,45 +243,7 @@ export const useTrialStore = create((set, get) => ({
       });
     } catch (_) {
       // Mock step in offline mode
-      const prev = get().observation;
-      const prevComp = prev.composition ?? { a: 0.34, b: 0.33, c: 0.33 };
-      const isRecruit = action.action_type === 'recruit';
-      const isDose = action.action_type === 'adjust_dose';
-      const isComp = action.action_type === 'update_composition';
-      const reward = parseFloat((Math.random() * 6 - 1.5).toFixed(3));
-      const newStep = stepNumber + 1;
-      const newActive = Math.max(0, (prev.active ?? 0) + (isRecruit ? (action.magnitude ?? 3) : 0));
-      const newDose = parseFloat(Math.max(0.3, Math.min(2.0,
-        (prev.dose_level ?? 1.0) + (isDose ? (action.magnitude ?? 0) : (Math.random() - 0.5) * 0.01)
-      )).toFixed(3));
-      const newComp = isComp && action.composition ? action.composition : {
-        a: parseFloat(Math.max(0.1, Math.min(0.8, prevComp.a + (Math.random() - 0.5) * 0.03)).toFixed(3)),
-        b: parseFloat(Math.max(0.1, Math.min(0.8, prevComp.b + (Math.random() - 0.5) * 0.02)).toFixed(3)),
-        c: parseFloat(Math.max(0.1, Math.min(0.8, prevComp.c + (Math.random() - 0.5) * 0.02)).toFixed(3)),
-      };
-      const obs = {
-        ...prev,
-        step: newStep,
-        active: newActive,
-        enrolled: (prev.enrolled ?? 0) + (isRecruit ? (action.magnitude ?? 3) : 0),
-        dose_level: newDose,
-        composition: newComp,
-        drug_concentration: parseFloat(Math.min(2, (prev.drug_concentration ?? 0.5) + (isDose ? (action.magnitude ?? 0) * 0.1 : 0) + (Math.random() - 0.48) * 0.04).toFixed(4)),
-        efficacy_signal_estimate: parseFloat(Math.min(1, (prev.efficacy_signal_estimate ?? 0.4) + 0.02 + Math.random() * 0.03).toFixed(4)),
-        cumulative_toxicity: parseFloat(Math.min(1, (prev.cumulative_toxicity ?? 0.1) + 0.01 + Math.random() * 0.015).toFixed(4)),
-        fda_sentiment: parseFloat(Math.min(1, (prev.fda_sentiment ?? 0.6) + (Math.random() - 0.4) * 0.05).toFixed(4)),
-        disease_progression: parseFloat(Math.max(0, (prev.disease_progression ?? 50) - 0.5 - Math.random()).toFixed(2)),
-        fda_flag: reward > 2 ? 'clear' : reward < -1 ? 'warning' : 'monitoring',
-        reward,
-        patient_states: mockPatients(Math.max(4, newActive)),
-      };
-      const phase = newStep < 5 ? 'PHASE I' : newStep < 12 ? 'PHASE II' : 'PHASE III';
-      set({
-        observation: obs, stepNumber: newStep, totalReward: totalReward + reward, trialPhase: phase,
-        history: [...history, obs],
-        eventLog: [...eventLog, { id: Date.now(), time: new Date().toLocaleTimeString(), type: reward >= 0 ? 'positive' : 'negative', message: `[Mock] Action: ${action.action_type ?? JSON.stringify(action)}`, reward }],
-        actionLoading: false,
-      });
+      set(buildMockStep(get().observation, action, stepNumber, totalReward, history, eventLog));
     }
   },
 }));
